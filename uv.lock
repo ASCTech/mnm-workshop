@@ -1,0 +1,31 @@
+version = 1
+revision = 3
+requires-python = ">=3.13"
+
+[manifest]
+members = [
+    "meta",
+    "mnms",
+    "ocr",
+    "transcription",
+]
+
+[[package]]
+name = "meta"
+version = "0.1.0"
+source = { virtual = "meta" }
+
+[[package]]
+name = "mnms"
+version = "0.1.0"
+source = { virtual = "." }
+
+[[package]]
+name = "ocr"
+version = "0.1.0"
+source = { virtual = "ocr" }
+
+[[package]]
+name = "transcription"
+version = "0.1.0"
+source = { virtual = "transcription" }
