@@ -14,4 +14,5 @@ members = [
     "transcription",
     "meta",
     "ocr",
+    "data_acquisition",
 ]

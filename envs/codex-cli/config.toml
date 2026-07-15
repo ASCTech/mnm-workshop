@@ -1,0 +1,14 @@
+# Codex CLI config — routes through the OSU LiteLLM proxy.
+# Seeded into $CODEX_HOME by the flake's shellHook. The API key is NOT stored
+# here; `env_key` tells Codex to read it from the LITELLM_KEY environment variable.
+
+model = "gpt-5.5-2026-04-24"
+model_provider = "litellm"
+
+[model_providers.litellm]
+name = "OSU LiteLLM Proxy"
+base_url = "https://litellm.cloud.osu.edu/v1"
+env_key = "LITELLM_KEY"
+# Codex only supports the Responses API (`wire_api = "chat"` was removed). The OSU
+# LiteLLM proxy exposes POST /v1/responses, so this works. It is also the default.
+wire_api = "responses"

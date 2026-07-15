@@ -1,0 +1,17 @@
+{
+  "providers": {
+    "litellm": {
+      "baseUrl": "https://litellm.cloud.osu.edu",
+      "api": "anthropic-messages",
+      "apiKey": "$LITELLM_KEY",
+      "models": [
+        {
+          "id": "claude-opus-4-8",
+          "name": "Claude Opus 4.8 (via LiteLLM)",
+          "contextWindow": 200000,
+          "maxTokens": 64000
+        }
+      ]
+    }
+  }
+}
