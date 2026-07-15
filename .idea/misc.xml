@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="uv SSH (sftp://dustin@localhost:22/home/dustin/Desktop/mnms/.venv/bin/python)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="uv SSH (sftp://dustin@localhost:22/home/dustin/Desktop/mnms/.venv/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="uv WSL (Ubuntu-24.04): (/home/miller7944/Desktop/mnms/.venv/bin/python)" project-jdk-type="Python SDK" />
 </project>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.system.id="pyproject.toml" type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$/ocr" />
+    <orderEntry type="jdk" jdkName="uv WSL (Ubuntu-24.04): (/home/miller7944/Desktop/mnms/.venv/bin/python)" jdkType="Python SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

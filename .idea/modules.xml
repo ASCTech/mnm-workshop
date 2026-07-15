@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/meta.iml" filepath="$PROJECT_DIR$/.idea/meta.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/mnms.iml" filepath="$PROJECT_DIR$/.idea/mnms.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/ocr.iml" filepath="$PROJECT_DIR$/.idea/ocr.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/transcription.iml" filepath="$PROJECT_DIR$/.idea/transcription.iml" />
     </modules>
   </component>
 </project>
