@@ -1,0 +1,7 @@
+[project]
+name = "corpus_coding"
+version = "0.1.0"
+description = "Multi-model codebook coding of a document corpus + inter-model agreement"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []

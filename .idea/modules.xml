@@ -2,10 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/bt_scoring.iml" filepath="$PROJECT_DIR$/.idea/bt_scoring.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/corpus_coding.iml" filepath="$PROJECT_DIR$/.idea/corpus_coding.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/data_acquisition.iml" filepath="$PROJECT_DIR$/.idea/data_acquisition.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/meta.iml" filepath="$PROJECT_DIR$/.idea/meta.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/mnms.iml" filepath="$PROJECT_DIR$/.idea/mnms.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/ocr.iml" filepath="$PROJECT_DIR$/.idea/ocr.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/structure_analysis.iml" filepath="$PROJECT_DIR$/.idea/structure_analysis.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/transcription.iml" filepath="$PROJECT_DIR$/.idea/transcription.iml" />
     </modules>
   </component>

@@ -12,9 +12,11 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "meta",
+    "bt-scoring",
+    "corpus-coding",
+    "data-acquisition",
     "mnms",
-    "ocr",
+    "structure-analysis",
     "transcription",
 ]
 
@@ -225,6 +227,11 @@ wheels = [
 ]
 
 [[package]]
+name = "bt-scoring"
+version = "0.1.0"
+source = { virtual = "bt_scoring" }
+
+[[package]]
 name = "certifi"
 version = "2026.4.22"
 source = { registry = "https://pypi.org/simple" }
@@ -357,6 +364,11 @@ wheels = [
 ]
 
 [[package]]
+name = "corpus-coding"
+version = "0.1.0"
+source = { virtual = "corpus_coding" }
+
+[[package]]
 name = "cuda-bindings"
 version = "13.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -421,6 +433,21 @@ nvrtc = [
 ]
 nvtx = [
     { name = "nvidia-nvtx", marker = "sys_platform == 'linux'" },
+]
+
+[[package]]
+name = "data-acquisition"
+version = "0.1.0"
+source = { virtual = "data_acquisition" }
+dependencies = [
+    { name = "python-dotenv" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "requests", specifier = ">=2.32.0" },
 ]
 
 [[package]]
@@ -826,11 +853,6 @@ wheels = [
 ]
 
 [[package]]
-name = "meta"
-version = "0.1.0"
-source = { virtual = "meta" }
-
-[[package]]
 name = "mnms"
 version = "0.1.0"
 source = { virtual = "." }
@@ -1218,11 +1240,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/f3/d86c845465a2723ad7e1e5c36dcd75ddb82898b3f53be47ebd429fb2fa5d/nvidia_nvtx-13.0.85-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:4936d1d6780fbe68db454f5e72a42ff64d1fd6397df9f363ae786930fd5c1cd4", size = 148047, upload-time = "2025-09-04T08:29:01.761Z" },
     { url = "https://files.pythonhosted.org/packages/a8/64/3708a90d1ebe202ffdeb7185f878a3c84d15c2b2c31858da2ce0583e2def/nvidia_nvtx-13.0.85-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:cb7780edb6b14107373c835bf8b72e7a178bac7367e23da7acb108f973f157a6", size = 148878, upload-time = "2025-09-04T08:28:53.627Z" },
 ]
-
-[[package]]
-name = "ocr"
-version = "0.1.0"
-source = { virtual = "ocr" }
 
 [[package]]
 name = "packaging"
@@ -1879,6 +1896,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/66/e3/ce8d38cb2d70e05ff
 wheels = [
     { url = "https://files.pythonhosted.org/packages/34/ae/e3707f6c1bc6f7aa0df600ba8075bfb8a19252140cd595335be60e25f9ee/standard_sunau-3.13.0-py3-none-any.whl", hash = "sha256:53af624a9529c41062f4c2fd33837f297f3baa196b0cfceffea6555654602622", size = 7364, upload-time = "2024-10-30T16:01:28.003Z" },
 ]
+
+[[package]]
+name = "structure-analysis"
+version = "0.1.0"
+source = { virtual = "structure_analysis" }
 
 [[package]]
 name = "sympy"

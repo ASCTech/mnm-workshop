@@ -12,7 +12,8 @@ dependencies = [
 [tool.uv.workspace]
 members = [
     "transcription",
-    "meta",
-    "ocr",
     "data_acquisition",
+    "corpus_coding",
+    "structure_analysis",
+    "bt_scoring",
 ]
