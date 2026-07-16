@@ -4,4 +4,18 @@ version = "0.1.0"
 description = "Pairwise LLM-as-judge over a corpus -> Bradley-Terry latent scale with SEs"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "openai>=1.40",
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scipy>=1.13",
+    "statsmodels>=0.14",
+    "choix>=0.3.5",
+    "transformers>=4.44",
+    "librosa>=0.10",
+    "soundfile>=0.12",
+    "accelerate>=0.33",
+    "tqdm>=4.66",
+]

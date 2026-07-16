@@ -1,0 +1,4 @@
+,calls,prompt_tokens,completion_tokens,cost_usd
+claude-haiku-4-5-20251001,24,63830,2638,0.07702
+gemini-2.5-flash-lite,24,60194,2363,0.006964600000000001
+llama3-3-70b-instruct,24,59226,1717,0.04387896000000001

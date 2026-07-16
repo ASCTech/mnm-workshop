@@ -4,4 +4,16 @@ version = "0.1.0"
 description = "Two-stage extract-then-cluster over a document corpus (topic hierarchy)"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "openai>=1.40",
+    "pydantic>=2.7",
+    "python-dotenv>=1.0",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scikit-learn>=1.4",
+    "bertopic>=0.16",
+    "umap-learn>=0.5",
+    "hdbscan>=0.8.33",
+    "plotly>=5.20",
+    "tqdm>=4.66",
+]

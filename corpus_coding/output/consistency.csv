@@ -1,0 +1,4 @@
+,study_type,has_human_subjects,has_animal_subjects,in_vitro,sample_size_reported,funding_disclosed,study_registered,open_data_statement,primary_field,overall
+claude-haiku-4-5-20251001,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,83.3,98.1
+gemini-2.5-flash-lite,95.8,100.0,100.0,100.0,100.0,100.0,100.0,95.8,91.7,98.1
+llama3-3-70b-instruct,100.0,100.0,100.0,100.0,95.8,100.0,100.0,100.0,87.5,98.1

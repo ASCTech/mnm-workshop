@@ -1,0 +1,206 @@
+
+<!doctype html>
+<html><head><meta charset="utf-8"><title>corpus_coding report</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 2rem; }
+table { border-collapse: collapse; margin-bottom: 2rem; }
+th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+caption { font-weight: bold; text-align: left; margin-bottom: .5rem; }
+</style></head><body>
+<h1>corpus_coding: multi-model codebook coding</h1>
+<p>12 article(s) coded; 0 failed coding attempt(s) excluded from scoring.
+Total cost: $0.1279.</p>
+
+<h2>Inter-model agreement (per question)</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>n_units</th>
+      <th>pct_agreement</th>
+      <th>cohen_kappa</th>
+      <th>krippendorff_alpha</th>
+      <th>fleiss_kappa</th>
+    </tr>
+    <tr>
+      <th>question</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>study_type</th>
+      <td>12</td>
+      <td>88.9</td>
+      <td>0.801</td>
+      <td>0.803</td>
+      <td>0.798</td>
+    </tr>
+    <tr>
+      <th>has_human_subjects</th>
+      <td>12</td>
+      <td>94.4</td>
+      <td>0.333</td>
+      <td>0.485</td>
+      <td>0.471</td>
+    </tr>
+    <tr>
+      <th>has_animal_subjects</th>
+      <td>12</td>
+      <td>100.0</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <th>in_vitro</th>
+      <td>12</td>
+      <td>100.0</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <th>sample_size_reported</th>
+      <td>12</td>
+      <td>83.3</td>
+      <td>0.514</td>
+      <td>0.531</td>
+      <td>0.518</td>
+    </tr>
+    <tr>
+      <th>funding_disclosed</th>
+      <td>12</td>
+      <td>100.0</td>
+      <td>1.000</td>
+      <td>1.000</td>
+      <td>1.000</td>
+    </tr>
+    <tr>
+      <th>study_registered</th>
+      <td>12</td>
+      <td>100.0</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <th>open_data_statement</th>
+      <td>12</td>
+      <td>88.9</td>
+      <td>0.619</td>
+      <td>0.548</td>
+      <td>0.535</td>
+    </tr>
+    <tr>
+      <th>primary_field</th>
+      <td>12</td>
+      <td>5.6</td>
+      <td>0.047</td>
+      <td>0.037</td>
+      <td>0.010</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Intra-model consistency (per model, % of runs matching that model's own majority)</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>study_type</th>
+      <th>has_human_subjects</th>
+      <th>has_animal_subjects</th>
+      <th>in_vitro</th>
+      <th>sample_size_reported</th>
+      <th>funding_disclosed</th>
+      <th>study_registered</th>
+      <th>open_data_statement</th>
+      <th>primary_field</th>
+      <th>overall</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>claude-haiku-4-5-20251001</th>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>83.3</td>
+      <td>98.1</td>
+    </tr>
+    <tr>
+      <th>gemini-2.5-flash-lite</th>
+      <td>95.8</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>95.8</td>
+      <td>91.7</td>
+      <td>98.1</td>
+    </tr>
+    <tr>
+      <th>llama3-3-70b-instruct</th>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>95.8</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>100.0</td>
+      <td>87.5</td>
+      <td>98.1</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Cost by model</h2>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>calls</th>
+      <th>prompt_tokens</th>
+      <th>completion_tokens</th>
+      <th>cost_usd</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>claude-haiku-4-5-20251001</th>
+      <td>24</td>
+      <td>63830</td>
+      <td>2638</td>
+      <td>0.077020</td>
+    </tr>
+    <tr>
+      <th>gemini-2.5-flash-lite</th>
+      <td>24</td>
+      <td>60194</td>
+      <td>2363</td>
+      <td>0.006965</td>
+    </tr>
+    <tr>
+      <th>llama3-3-70b-instruct</th>
+      <td>24</td>
+      <td>59226</td>
+      <td>1717</td>
+      <td>0.043879</td>
+    </tr>
+  </tbody>
+</table>
+</body></html>

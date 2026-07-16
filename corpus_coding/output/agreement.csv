@@ -1,0 +1,10 @@
+question,n_units,pct_agreement,cohen_kappa,krippendorff_alpha,fleiss_kappa
+study_type,12,88.9,0.801,0.803,0.798
+has_human_subjects,12,94.4,0.333,0.485,0.471
+has_animal_subjects,12,100.0,,,
+in_vitro,12,100.0,,,
+sample_size_reported,12,83.3,0.514,0.531,0.518
+funding_disclosed,12,100.0,1.0,1.0,1.0
+study_registered,12,100.0,,,
+open_data_statement,12,88.9,0.619,0.548,0.535
+primary_field,12,5.6,0.047,0.037,0.01

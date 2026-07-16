@@ -1,0 +1,4 @@
+transcripts/
+comparisons.jsonl
+scores.csv
+__pycache__/
