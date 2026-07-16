@@ -1,4 +1,5 @@
 transcripts/
 comparisons.jsonl
 scores.csv
+output/
 __pycache__/

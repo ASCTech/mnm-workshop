@@ -18,4 +18,5 @@ dependencies = [
     "soundfile>=0.12",
     "accelerate>=0.33",
     "tqdm>=4.66",
+    "plotly>=5.20",
 ]

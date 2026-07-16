@@ -21,10 +21,14 @@ load_dotenv(REPO_ROOT / ".env")
 
 # {model: (input_$_per_million_tokens, output_$_per_million_tokens)}
 PRICES_PER_MILLION: dict[str, tuple[float, float]] = {
+    "gemini-3.1-flash-lite": (0.25, 1.50),
     "gemini-2.5-flash-lite": (0.10, 0.40),
+    "gpt-5.4-mini-2026-03-17": (0.75, 4.50),
     "claude-haiku-4-5-20251001": (1.00, 5.00),
     "llama3-3-70b-instruct": (0.72, 0.72),
     "titan-embed-text-v2:0": (0.02, 0.00),
+    # local sentence-transformers inference: no proxy call, no token cost.
+    "all-MiniLM-L6-v2 (local)": (0.0, 0.0),
 }
 
 _client: OpenAI | None = None
@@ -73,12 +77,18 @@ class CostLedger:
     def summary_lines(self) -> list[str]:
         with self._lock:
             lines = []
+            total = 0.0
             for model, row in sorted(self.totals.items()):
+                total += row["cost_usd"]
                 lines.append(
                     f"  {model:30s} {row['calls']:5d} calls  "
                     f"{row['input_tokens']:>9,} in  {row['output_tokens']:>9,} out  "
                     f"${row['cost_usd']:.4f}"
                 )
+            # Compute the total from within this same lock — do NOT call the
+            # `total_cost_usd` property here: it re-acquires `self._lock`, which
+            # is a plain (non-reentrant) Lock, so it would deadlock the thread
+            # against itself and hang the whole run right after "Cost:" prints.
             lines.append(f"  {'TOTAL':30s} {'':>5s}        "
-                          f"{'':>9s}    {'':>9s}      ${self.total_cost_usd:.4f}")
+                          f"{'':>9s}    {'':>9s}      ${total:.4f}")
             return lines

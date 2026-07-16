@@ -26,6 +26,7 @@ Docs: https://pmc.ncbi.nlm.nih.gov/tools/pmcaws/  and  /tools/oa-service/
 from __future__ import annotations
 
 import argparse
+import random
 import re
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
@@ -41,17 +42,29 @@ DEFAULT_LIMIT = 20
 DEFAULT_LICENSES = ("CC0", "CC BY")
 DEFAULT_FORMATS = ("txt", "xml")  # small + LLM-friendly; add "pdf" to mirror "PDFs in"
 # oa.fcgi date windows filter by when an article entered the OA subset, not by
-# publication date; any recent span yields plenty of CC BY articles.
-DEFAULT_START = "2023-01-01"
-MAX_WINDOWS = 60  # safety cap on how many days we'll scan for a small sample
+# publication date. We sample RANDOM days across a multi-year range (not
+# consecutive days from one start) so the corpus spans time and topics instead of
+# clustering on whatever entered the subset in one particular week.
+DEFAULT_START = "2018-01-01"
+DEFAULT_END = "2024-12-31"
+MAX_WINDOWS = 400  # safety cap on how many day-windows we'll scan for a sample
 
 _KEY_RE = None  # compiled per-PMCID in latest_version()
 
 
-def enumerate_records(session: PoliteSession, licenses: set[str], start: date):
-    """Yield (pmcid, license) for matching OA records, one date window at a time."""
-    day = start
-    for _ in range(MAX_WINDOWS):
+def _random_days(start: date, end: date, n: int, seed: int) -> list[date]:
+    """`n` distinct days sampled uniformly from [start, end], seeded + sorted."""
+    span = (end - start).days
+    rng = random.Random(seed)
+    n = min(n, span + 1)
+    offsets = rng.sample(range(span + 1), n)
+    return sorted(start + timedelta(days=o) for o in offsets)
+
+
+def enumerate_records(session: PoliteSession, licenses: set[str],
+                      start: date, end: date, seed: int):
+    """Yield (pmcid, license) for matching OA records over RANDOM day windows."""
+    for day in _random_days(start, end, MAX_WINDOWS, seed):
         params = {
             "from": day.isoformat(),
             "until": (day + timedelta(days=1)).isoformat(),
@@ -64,7 +77,6 @@ def enumerate_records(session: PoliteSession, licenses: set[str], start: date):
         for rec in root.findall("records/record"):
             if rec.get("license", "none") in licenses:
                 yield rec.get("id"), rec.get("license")
-        day += timedelta(days=1)
 
 
 def latest_version(session: PoliteSession, pmcid: str) -> str | None:
@@ -85,7 +97,11 @@ def main() -> None:
     ap.add_argument("--formats", nargs="+", default=list(DEFAULT_FORMATS),
                     help="file formats to download per article (txt, xml, pdf)")
     ap.add_argument("--start", default=DEFAULT_START,
-                    help=f"first OA-service date window (default {DEFAULT_START})")
+                    help=f"start of the sampled date range (default {DEFAULT_START})")
+    ap.add_argument("--end", default=DEFAULT_END,
+                    help=f"end of the sampled date range (default {DEFAULT_END})")
+    ap.add_argument("--seed", type=int, default=0,
+                    help="seed for the random day sampling (reproducible)")
     ap.add_argument("--out", type=Path, default=OUT_DIR)
     ap.add_argument("--rate", type=float, default=1.0,
                     help="min seconds between requests to a host (default 1.0)")
@@ -94,10 +110,12 @@ def main() -> None:
     licenses = set(args.licenses)
     session = PoliteSession(min_interval=args.rate)
     log(f"Fetching up to {args.limit} PMC OA articles; licenses={sorted(licenses)} "
-        f"formats={args.formats}")
+        f"formats={args.formats}; sampling days in [{args.start}, {args.end}] seed={args.seed}")
 
     rows: list[dict] = []
-    for pmcid, lic in enumerate_records(session, licenses, date.fromisoformat(args.start)):
+    for pmcid, lic in enumerate_records(session, licenses,
+                                        date.fromisoformat(args.start),
+                                        date.fromisoformat(args.end), args.seed):
         ver = latest_version(session, pmcid)
         if ver is None:
             log(f"  {pmcid}: not on AWS OA mirror yet, skipping")

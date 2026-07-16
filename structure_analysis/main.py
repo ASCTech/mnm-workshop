@@ -6,12 +6,16 @@ hierarchy, validate against ground-truth categories.
 Pipeline (see README.md for the archetype this stands in for):
   1. EXTRACT  — LLM call per abstract -> AbstractFields JSON (schema.py),
                checkpointed to output/<source>/extractions.jsonl.
-  2. EMBED    — join(domain, methods, techniques, contribution) -> Titan
-               embedding, cached to output/<source>/embeddings.npy.
+  2. EMBED    — join(domain, methods, techniques, contribution) -> embedding
+               (local sentence-transformers all-MiniLM-L6-v2 by default, or
+               the proxy's titan-embed-text-v2:0 via --embed-backend titan),
+               cached to output/<source>/embeddings_<backend>.npy.
   3. CLUSTER  — BERTopic (UMAP + HDBSCAN) on precomputed embeddings.
   4. VALIDATE — ARI / NMI / homogeneity / completeness / V-measure of the
                recovered topics against the held-out ground-truth label
                (arXiv primary_category / NSF fundProgramName).
+  5. VIZ      — interactive Plotly figures + an HTML index (viz.py), under
+               output/<source>/viz/.
 """
 
 from __future__ import annotations
@@ -21,6 +25,17 @@ import json
 import os
 import sys
 from pathlib import Path
+
+# Pin numba/OpenMP to a single, fork-safe thread BEFORE importing anything that
+# pulls in numba (UMAP, via cluster). Without this the BERTopic UMAP fit
+# intermittently deadlocks at exit/compile (main thread parked in sigsuspend) on
+# some machines — fatal for a workshop whose whole point is reliable re-runs.
+# `workqueue` is numba's fork-safe threading layer; single-threaded is plenty for
+# this corpus size and makes runs deterministic. Must be set before import.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("NUMBA_NUM_THREADS", "1")
+os.environ.setdefault("NUMBA_THREADING_LAYER", "workqueue")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -36,6 +51,7 @@ from cluster import (  # noqa: E402
 from data import load_corpus  # noqa: E402
 from extract import load_extractions, run_extraction  # noqa: E402
 from llm import CostLedger  # noqa: E402
+from viz import render_all  # noqa: E402
 
 THIS_DIR = Path(__file__).resolve().parent
 
@@ -44,11 +60,30 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--source", choices=["arxiv", "nsf"], default="arxiv")
     p.add_argument("--limit", type=int, default=400, help="corpus size (default 400)")
-    p.add_argument("--extract-model", default="gemini-2.5-flash-lite")
-    p.add_argument("--embed-model", default="titan-embed-text-v2:0")
-    p.add_argument("--min-cluster-size", type=int, default=8)
-    p.add_argument("--n-neighbors", type=int, default=10, help="UMAP n_neighbors")
-    p.add_argument("--n-components", type=int, default=10, help="UMAP n_components")
+    p.add_argument(
+        "--extract-model",
+        default="gemini-3.1-flash-lite",
+        help="chat model for stage-1 extraction. Other roster options: "
+             "gpt-5.4-mini-2026-03-17, claude-haiku-4-5-20251001, llama3-3-70b-instruct.",
+    )
+    p.add_argument(
+        "--embed-backend",
+        choices=["minilm", "titan"],
+        default="minilm",
+        help="'minilm' (default): local sentence-transformers all-MiniLM-L6-v2, "
+             "384-dim, no network call, no cost — anecdotally clusters more cleanly "
+             "for this short structured-field text. 'titan': proxy embedding model "
+             "titan-embed-text-v2:0, 1024-dim, costed.",
+    )
+    p.add_argument(
+        "--embed-model",
+        default=None,
+        help="override the embed model name for the chosen --embed-backend "
+             "(defaults: all-MiniLM-L6-v2 for minilm, titan-embed-text-v2:0 for titan)",
+    )
+    p.add_argument("--min-cluster-size", type=int, default=10)
+    p.add_argument("--n-neighbors", type=int, default=15, help="UMAP n_neighbors")
+    p.add_argument("--n-components", type=int, default=5, help="UMAP n_components")
     p.add_argument("--label-level", choices=["top", "full"], default="full",
                     help="ground-truth label granularity for validation. 'top' collapses "
                          "arXiv categories to their top-level part (e.g. cs.CV -> cs); with "
@@ -97,12 +132,18 @@ def main() -> None:
     # --- Stage 2: embed ---
     embed_texts_list = [build_embedding_text(d["parsed"]) for d in usable]
     doc_ids = [d["doc_id"] for d in usable]
-    npy_path = out_dir / "embeddings.npy"
-    index_path = out_dir / "embeddings_index.json"
+    embed_model = args.embed_model or (
+        "all-MiniLM-L6-v2" if args.embed_backend == "minilm" else "titan-embed-text-v2:0"
+    )
+    # Backend/model-keyed cache filenames: a 384-dim MiniLM cache and a 1024-dim
+    # Titan cache must never collide or be silently loaded into the wrong shape.
+    npy_path = out_dir / f"embeddings_{args.embed_backend}.npy"
+    index_path = out_dir / f"embeddings_{args.embed_backend}_index.json"
     embeddings = embed_texts(
         doc_ids,
         embed_texts_list,
-        model=args.embed_model,
+        backend=args.embed_backend,
+        model=embed_model,
         npy_path=npy_path,
         index_path=index_path,
         ledger=ledger,
@@ -145,6 +186,7 @@ def main() -> None:
     doc_info.to_csv(doc_info_path, index=False)
 
     # Topic hierarchy
+    hierarchy_df = None
     try:
         hierarchy_df = model.hierarchical_topics(embed_texts_list)
         hierarchy_df.to_csv(out_dir / "hierarchy.csv", index=False)
@@ -157,6 +199,38 @@ def main() -> None:
 
     ledger_path = out_dir / "cost_ledger.json"
     ledger_path.write_text(json.dumps(ledger.totals, indent=2))
+
+    # --- Stage 5: viz ---
+    print("Building visualizations...")
+    viz_meta = {
+        "source": args.source,
+        "extract_model": args.extract_model,
+        "embed_backend": args.embed_backend,
+        "embed_model": embed_model,
+        "n_neighbors": args.n_neighbors,
+        "n_components": args.n_components,
+        "min_cluster_size": args.min_cluster_size,
+        "label_level": args.label_level,
+        "total_cost_usd": ledger.total_cost_usd,
+    }
+    try:
+        index_html_path = render_all(
+            out_dir=out_dir,
+            model=model,
+            embeddings=embeddings,
+            topics=topics,
+            labels=labels,
+            doc_ids=doc_ids,
+            titles=[d["title"] for d in usable],
+            metrics=metrics,
+            crosstab=crosstab,
+            hierarchy_df=hierarchy_df,
+            meta=viz_meta,
+        )
+        print(f"  viz index: {index_html_path}")
+    except Exception as e:
+        print(f"  [warn] viz failed: {type(e).__name__}: {e}")
+        index_html_path = None
 
     # --- Summary ---
     print("\n=== SUMMARY ===")
@@ -180,11 +254,14 @@ def main() -> None:
         print(f"  {p.name}")
     if n_merges:
         print("  hierarchy.csv, topic_tree.txt")
+    if index_html_path:
+        print(f"  viz/{index_html_path.name} (+ viz/*.html figures)")
 
 
 if __name__ == "__main__":
+    # Note: a previous version force-exited with os._exit(0) here to dodge an
+    # apparent "exit hang". The real cause was a self-deadlock in
+    # CostLedger.summary_lines() (re-acquiring a non-reentrant Lock); with that
+    # fixed, the interpreter shuts down normally and reaps its worker children,
+    # so no hard exit is needed.
     main()
-    # numba/joblib thread-pool cleanup can hang the interpreter at exit after
-    # BERTopic finishes; outputs are already flushed, so bail out cleanly
-    # (same workaround as transcription/main.py).
-    os._exit(0)

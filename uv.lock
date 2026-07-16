@@ -266,6 +266,7 @@ dependencies = [
     { name = "numpy" },
     { name = "openai" },
     { name = "pandas" },
+    { name = "plotly" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "scipy" },
@@ -283,6 +284,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "openai", specifier = ">=1.40" },
     { name = "pandas", specifier = ">=2.2" },
+    { name = "plotly", specifier = ">=5.20" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "scipy", specifier = ">=1.13" },
@@ -447,6 +449,7 @@ dependencies = [
     { name = "numpy" },
     { name = "openai" },
     { name = "pandas" },
+    { name = "plotly" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "scikit-learn" },
@@ -461,6 +464,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "openai", specifier = ">=1.40" },
     { name = "pandas", specifier = ">=2.2" },
+    { name = "plotly", specifier = ">=5.20" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "scikit-learn", specifier = ">=1.4" },
@@ -2297,6 +2301,8 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "scikit-learn" },
+    { name = "sentence-transformers" },
+    { name = "tqdm" },
     { name = "umap-learn" },
 ]
 
@@ -2311,6 +2317,8 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.7" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "scikit-learn", specifier = ">=1.4" },
+    { name = "sentence-transformers", specifier = ">=2.7" },
+    { name = "tqdm", specifier = ">=4.66" },
     { name = "umap-learn", specifier = ">=0.5" },
 ]
 

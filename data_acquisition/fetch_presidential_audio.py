@@ -23,6 +23,9 @@ Docs: https://archive.org/developers/  (advancedsearch, metadata, download)
 from __future__ import annotations
 
 import argparse
+import random
+import re
+from collections import defaultdict
 from pathlib import Path
 
 from common import PoliteSession, log, write_manifest
@@ -37,18 +40,70 @@ DEFAULT_COLLECTION = "presidential_recordings"
 # Prefer the smallest usable single-file audio derivative.
 AUDIO_FORMAT_PREFERENCE = ("64Kbps MP3", "VBR MP3", "Ogg Vorbis")
 
+# Map an item's identifier prefix to a canonical speaker so we can stratify the
+# sample by president instead of taking whatever the default sort returns (the
+# collection is dominated by a few speakers/years, so a naive head-of-list grab
+# comes back almost entirely one president in one year).
+_SPEAKER_PREFIXES = (
+    ("fdr", "fdr"), ("dde", "eisenhower"), ("jfk", "kennedy"), ("lbj", "johnson"),
+    ("nixon", "nixon"), ("reagan", "reagan"), ("gwb", "gw_bush"),
+    ("dictabelt", "dictabelt"),
+)
 
-def list_items(session: PoliteSession, collection: str, limit: int) -> list[dict]:
+
+def speaker_key(identifier: str) -> str:
+    ident = (identifier or "").lower()
+    for prefix, name in _SPEAKER_PREFIXES:
+        if ident.startswith(prefix):
+            return name
+    m = re.match(r"[a-z]+", ident)
+    return m.group(0) if m else ident
+
+
+def list_items(session: PoliteSession, collection: str) -> list[dict]:
+    """Fetch the FULL item list for the collection (it's small — ~100s of items)."""
     params = {
         "q": f"collection:{collection}",
         "fl[]": ["identifier", "title", "year", "date"],
-        "rows": limit,
+        "rows": 5000,
         "page": 1,
-        "sort[]": "date asc",  # oldest first -> emphasise the time span
+        "sort[]": "date asc",
         "output": "json",
     }
     data = session.get_json(SEARCH, params=params)
     return data["response"]["docs"]
+
+
+def select_diverse(docs: list[dict], limit: int, seed: int) -> list[dict]:
+    """Speaker-stratified, time-spread selection.
+
+    Group items by canonical speaker, order each speaker's items chronologically,
+    then round-robin across speakers so the sample spreads over presidents *and*
+    (within each) over time — rather than clustering on the most-represented
+    speaker/year the way a plain sort does.
+    """
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for d in docs:
+        groups[speaker_key(d.get("identifier", ""))].append(d)
+    for items in groups.values():
+        items.sort(key=lambda x: str(x.get("date") or x.get("year") or ""))
+
+    keys = sorted(groups)
+    random.Random(seed).shuffle(keys)  # seeded: reproducible but not alphabetical
+    cursors = {k: 0 for k in keys}
+    selected: list[dict] = []
+    while len(selected) < limit:
+        progressed = False
+        for k in keys:
+            if cursors[k] < len(groups[k]):
+                selected.append(groups[k][cursors[k]])
+                cursors[k] += 1
+                progressed = True
+                if len(selected) >= limit:
+                    break
+        if not progressed:  # every speaker exhausted
+            break
+    return selected
 
 
 def pick_audio(files: list[dict]) -> dict | None:
@@ -78,11 +133,22 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=OUT_DIR)
     ap.add_argument("--rate", type=float, default=1.0,
                     help="min seconds between requests (default 1.0)")
+    ap.add_argument("--seed", type=int, default=0,
+                    help="seed for the speaker round-robin order (reproducible)")
+    ap.add_argument("--no-stratify", action="store_true",
+                    help="disable speaker stratification (take oldest-first, the old behaviour)")
     args = ap.parse_args()
 
     session = PoliteSession(min_interval=args.rate)
-    log(f"Listing up to {args.limit} items from IA collection {args.collection!r}")
-    items = list_items(session, args.collection, args.limit)
+    log(f"Listing items from IA collection {args.collection!r}")
+    all_items = list_items(session, args.collection)
+    if args.no_stratify:
+        items = all_items[: args.limit]
+    else:
+        items = select_diverse(all_items, args.limit, args.seed)
+        spread = sorted({speaker_key(d.get("identifier", "")) for d in items})
+        log(f"  {len(all_items)} items available; selected {len(items)} across "
+            f"speakers: {', '.join(spread)}")
 
     rows: list[dict] = []
     for doc in items:

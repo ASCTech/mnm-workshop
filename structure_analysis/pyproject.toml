@@ -15,5 +15,6 @@ dependencies = [
     "umap-learn>=0.5",
     "hdbscan>=0.8.33",
     "plotly>=5.20",
+    "sentence-transformers>=2.7",
     "tqdm>=4.66",
 ]

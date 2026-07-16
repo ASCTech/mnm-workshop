@@ -22,6 +22,25 @@ from llm import CostLedger, get_client
 
 UMAP_SEED = 20260716
 
+DEFAULT_MINILM_MODEL = "all-MiniLM-L6-v2"
+DEFAULT_TITAN_MODEL = "titan-embed-text-v2:0"
+
+_minilm_model = None  # lazy singleton, like llm.get_client()
+
+
+def _get_minilm(model_name: str):
+    global _minilm_model
+    if _minilm_model is None:
+        from sentence_transformers import SentenceTransformer
+
+        # Pin to CPU: this branch is not a GPU workload (600 short texts embed in
+        # a couple seconds on CPU), and keeping it CPU-only makes it portable for
+        # workshop attendees without a GPU and avoids any CUDA/fork interaction
+        # with the numba-based clustering that follows.
+        print(f"  loading local sentence-transformers model: {model_name} (cpu) ...")
+        _minilm_model = SentenceTransformer(model_name, device="cpu")
+    return _minilm_model
+
 
 def build_embedding_text(parsed: dict) -> str:
     """domain + methods + techniques + contribution, per the workshop spec.
@@ -40,6 +59,7 @@ def build_embedding_text(parsed: dict) -> str:
 def embed_texts(
     doc_ids: list[str],
     texts: list[str],
+    backend: str,
     model: str,
     npy_path: Path,
     index_path: Path,
@@ -47,10 +67,23 @@ def embed_texts(
     batch_size: int = 64,
     force: bool = False,
 ) -> np.ndarray:
-    """Embed `texts` via the proxy, cached to `npy_path` (+ doc_id index json).
+    """Embed `texts`, cached to `npy_path` (+ doc_id index json).
+
+    `backend` is one of:
+      - "minilm": local `sentence-transformers` model (default; e.g. all-MiniLM-L6-v2,
+        384-dim). No network call, no token cost — anecdotally clusters MORE cleanly
+        for this kind of short structured-field text than the larger proxy embedding
+        model, per the workshop owner's guidance.
+      - "titan": OSU LiteLLM proxy embedding model (e.g. titan-embed-text-v2:0,
+        1024-dim). Costed via `ledger`.
+
+    `npy_path`/`index_path` are expected to already be backend-specific (callers
+    should name them e.g. `embeddings_minilm.npy` / `embeddings_titan.npy`) so a
+    384-dim MiniLM cache can never be silently loaded where a 1024-dim Titan
+    cache — or vice versa — was expected.
 
     Cache hit requires the same doc_id set in the same order; otherwise
-    re-embeds everything (cheap: titan-embed-text-v2:0 is $0.02/1M tokens).
+    re-embeds everything.
     """
     if not force and npy_path.exists() and index_path.exists():
         cached_ids = json.loads(index_path.read_text())
@@ -60,24 +93,37 @@ def embed_texts(
         print("  embeddings cache stale (doc set changed) — re-embedding")
 
     npy_path.parent.mkdir(parents=True, exist_ok=True)
-    client = get_client()
-    vectors: list[np.ndarray] = []
-    for i in tqdm(range(0, len(texts), batch_size), desc="embed"):
-        batch = texts[i : i + batch_size]
-        resp = client.embeddings.create(model=model, input=batch)
-        usage = getattr(resp, "usage", None)
-        in_tok = getattr(usage, "prompt_tokens", None) or getattr(usage, "total_tokens", 0) or 0
-        ledger.add(model, in_tok, 0)
-        vectors.extend(np.array(d.embedding, dtype=np.float32) for d in resp.data)
 
-    arr = np.vstack(vectors)
+    if backend == "minilm":
+        st_model = _get_minilm(model)
+        vectors_arr = st_model.encode(
+            texts, batch_size=batch_size, show_progress_bar=True, convert_to_numpy=True
+        )
+        arr = np.asarray(vectors_arr, dtype=np.float32)
+        # Local inference: no proxy call, no tokens, no cost — record it in the
+        # ledger at $0 for visibility rather than silently omitting it.
+        ledger.add(f"{model} (local)", 0, 0)
+    elif backend == "titan":
+        client = get_client()
+        vectors: list[np.ndarray] = []
+        for i in tqdm(range(0, len(texts), batch_size), desc="embed"):
+            batch = texts[i : i + batch_size]
+            resp = client.embeddings.create(model=model, input=batch)
+            usage = getattr(resp, "usage", None)
+            in_tok = getattr(usage, "prompt_tokens", None) or getattr(usage, "total_tokens", 0) or 0
+            ledger.add(model, in_tok, 0)
+            vectors.extend(np.array(d.embedding, dtype=np.float32) for d in resp.data)
+        arr = np.vstack(vectors)
+    else:
+        raise ValueError(f"unknown embed backend: {backend!r} (expected 'minilm' or 'titan')")
+
     np.save(npy_path, arr)
     index_path.write_text(json.dumps(doc_ids))
     print(f"  embedded {arr.shape[0]} docs -> {arr.shape[1]}-dim, cached to {npy_path.name}")
     return arr
 
 
-def make_bertopic(min_cluster_size: int, n_neighbors: int = 10, n_components: int = 10) -> BERTopic:
+def make_bertopic(min_cluster_size: int, n_neighbors: int = 15, n_components: int = 5) -> BERTopic:
     umap_model = UMAP(
         n_components=n_components,
         n_neighbors=n_neighbors,
@@ -85,11 +131,22 @@ def make_bertopic(min_cluster_size: int, n_neighbors: int = 10, n_components: in
         metric="cosine",
         random_state=UMAP_SEED,
     )
+    # cluster_selection_method="leaf", not the HDBSCAN default "eom": on these
+    # MiniLM embeddings the density has one dominant mode, so eom collapses to a
+    # single giant topic + one small one (2 topics, 0 outliers) regardless of
+    # min_cluster_size. "leaf" selects the fine-grained leaf clusters instead,
+    # recovering the ~9-12 field-level topics that KMeans/NMI confirm are present.
+    # core_dist_n_jobs=1: HDBSCAN otherwise spawns a joblib/loky worker pool for
+    # the core-distance step, and those child processes intermittently fail to be
+    # reaped — the parent then blocks joining them at teardown (a 3-minute hang
+    # requiring a manual kill). At this corpus size the parallelism buys nothing,
+    # so run it in-process for a clean, reliable exit.
     hdbscan_model = HDBSCAN(
         min_cluster_size=min_cluster_size,
         metric="euclidean",
-        cluster_selection_method="eom",
+        cluster_selection_method="leaf",
         prediction_data=True,
+        core_dist_n_jobs=1,
     )
     vectorizer_model = CountVectorizer(stop_words="english", ngram_range=(1, 2), min_df=2)
     # embedding_model left as None (default): we always pass precomputed
@@ -108,8 +165,8 @@ def fit_topics(
     texts: list[str],
     embeddings: np.ndarray,
     min_cluster_size: int,
-    n_neighbors: int = 10,
-    n_components: int = 10,
+    n_neighbors: int = 15,
+    n_components: int = 5,
 ) -> tuple[BERTopic, list[int]]:
     model = make_bertopic(min_cluster_size, n_neighbors, n_components)
     topics, _ = model.fit_transform(documents=texts, embeddings=embeddings)

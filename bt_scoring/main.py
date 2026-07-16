@@ -6,10 +6,13 @@ and the dimension being judged here. Pipeline:
 
   1. transcribe a bounded leading segment of each clip with Granite-Speech
      (transcribe.py), cached to transcripts/<id>.txt.
-  2. sample pairwise matchups and judge them with a cheap LLM via the LiteLLM
-     proxy (judge.py), checkpointed to comparisons.jsonl.
-  3. fit a Bradley-Terry scale with SEs (bt_fit.py) and validate it against
-     year and speaker.
+  2. sample pairwise matchups and judge the IDENTICAL pair set with every
+     model in --judges via the LiteLLM proxy (judge.py), checkpointed to
+     comparisons.jsonl keyed by (pair, judge, order) for per-judge resume.
+  3. fit a separate Bradley-Terry scale with SEs per judge (bt_fit.py),
+     validate each against year/speaker, and compare judges via a Spearman
+     rank-correlation matrix of their BT scales.
+  4. render Plotly figures + an HTML index (viz.py).
 
 Run: uv run --no-sync --package bt_scoring python bt_scoring/main.py
 """
@@ -28,9 +31,10 @@ import pandas as pd
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
-from bt_fit import fit_bt_choix, fit_bt_logit, validate_scale
+from bt_fit import fit_bt_choix, fit_bt_logit, judge_rank_correlation, validate_scale
 from judge import run_judging, sample_matchups
 from transcribe import transcribe_manifest
+from viz import render_all
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BRANCH_DIR = Path(__file__).resolve().parent
@@ -39,6 +43,19 @@ DEFAULT_MANIFEST = REPO_ROOT / "data_acquisition" / "data" / "presidential_audio
 DEFAULT_DIMENSION = (
     "rhetorical register: measured/formal <-> emotionally intense/populist"
 )
+
+# Default judge roster for the Round-2 multi-judge comparison: a diverse mix
+# of families/tiers plus one frontier contrast, all confirmed against the
+# LiteLLM proxy. kimi-k2.5 (slow, ~26s/call) and deepseek-r1 (dropped from the
+# workshop) are deliberately left out of the default but can be added via
+# --judges.
+DEFAULT_JUDGES = [
+    "gemini-3.1-flash-lite",
+    "gpt-5.4-mini-2026-03-17",
+    "claude-haiku-4-5-20251001",
+    "llama3-3-70b-instruct",
+    "claude-opus-4-8",
+]
 
 _NIXON_DATE_RE = re.compile(r"(\d{4})$")
 _LBJ_ID_RE = re.compile(r"^lbj(\d{2})\d{4}$")
@@ -93,26 +110,36 @@ def build_scores_table(bt: pd.DataFrame, choix_est: pd.Series, items: list[dict]
     return scores.sort_values("rank")
 
 
-def summarize_cost(comparisons_path: Path) -> dict:
-    n_ok, n_err = 0, 0
-    prompt_tok, completion_tok, cost = 0, 0, 0.0
+def summarize_cost_by_judge(comparisons_path: Path) -> dict[str, dict]:
+    """Cost/usage/status breakdown per judge model, keyed by the "model"
+    field recorded in each comparisons.jsonl row."""
+    per_judge: dict[str, dict] = {}
     if comparisons_path.exists():
         with comparisons_path.open("r", encoding="utf-8") as f:
             for line in f:
                 rec = json.loads(line)
+                model = rec.get("model", "unknown")
+                d = per_judge.setdefault(model, {
+                    "n_ok": 0, "n_error": 0,
+                    "prompt_tokens": 0, "completion_tokens": 0, "cost_usd_est": 0.0,
+                })
                 if rec.get("status") == "ok":
-                    n_ok += 1
+                    d["n_ok"] += 1
                 else:
-                    n_err += 1
-                prompt_tok += rec.get("usage", {}).get("prompt_tokens", 0)
-                completion_tok += rec.get("usage", {}).get("completion_tokens", 0)
+                    d["n_error"] += 1
+                d["prompt_tokens"] += rec.get("usage", {}).get("prompt_tokens", 0)
+                d["completion_tokens"] += rec.get("usage", {}).get("completion_tokens", 0)
                 if rec.get("cost_usd_est"):
-                    cost += rec["cost_usd_est"]
-    return {
-        "n_ok": n_ok, "n_error": n_err,
-        "prompt_tokens": prompt_tok, "completion_tokens": completion_tok,
-        "cost_usd_est": cost,
-    }
+                    d["cost_usd_est"] += rec["cost_usd_est"]
+    return per_judge
+
+
+def summarize_cost_total(per_judge: dict[str, dict]) -> dict:
+    total = {"n_ok": 0, "n_error": 0, "prompt_tokens": 0, "completion_tokens": 0, "cost_usd_est": 0.0}
+    for d in per_judge.values():
+        for k in total:
+            total[k] += d[k]
+    return total
 
 
 def parse_args() -> argparse.Namespace:
@@ -123,9 +150,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--segment-seconds", type=float, default=90.0, help="leading audio segment to transcribe")
     p.add_argument("--chunk-seconds", type=float, default=30.0, help="ASR chunk window within the segment")
     p.add_argument("--min-matchups", type=int, default=8, help="minimum comparisons per item")
-    p.add_argument("--judge-model", type=str, default="gemini-2.5-flash-lite")
+    p.add_argument(
+        "--judges", type=str, nargs="+", default=DEFAULT_JUDGES,
+        help="judge models; the IDENTICAL pair set is judged by every model for comparability",
+    )
     p.add_argument("--dimension", type=str, default=DEFAULT_DIMENSION)
-    p.add_argument("--concurrency", type=int, default=6, help="parallel judge calls")
+    p.add_argument("--concurrency", type=int, default=10, help="parallel judge calls (shared across judges)")
     p.add_argument("--timeout-s", type=float, default=60.0)
     p.add_argument("--seed", type=int, default=11111)
     p.add_argument("--skip-transcribe", action="store_true", help="reuse cached transcripts only")
@@ -139,7 +169,9 @@ def main() -> None:
 
     transcripts_dir = args.out_dir / "transcripts"
     comparisons_path = args.out_dir / "comparisons.jsonl"
-    scores_path = args.out_dir / "scores.csv"
+    output_dir = args.out_dir / "output"
+    scores_by_judge_dir = output_dir / "scores_by_judge"
+    scores_by_judge_dir.mkdir(parents=True, exist_ok=True)
 
     items = load_items(args.manifest, args.num_items)
     print(f"Loaded {len(items)} items from {args.manifest}", flush=True)
@@ -165,58 +197,108 @@ def main() -> None:
     if len(identifiers) < 4:
         raise SystemExit(f"Only {len(identifiers)} transcripts available; need >= 4 to fit a BT scale.")
 
-    # --- 2. pairwise judging ------------------------------------------------
+    # --- 2. pairwise judging, identical pair set across every judge --------
+    matchups = sample_matchups(identifiers, args.min_matchups, args.seed)
+    print(f"Sampled {len(matchups)} matchups (min {args.min_matchups}/item, {len(identifiers)} items) "
+          f"-- judged by {len(args.judges)} models: {args.judges}", flush=True)
     if not args.skip_judge:
-        matchups = sample_matchups(identifiers, args.min_matchups, args.seed)
-        print(f"Sampled {len(matchups)} matchups (min {args.min_matchups}/item, {len(identifiers)} items)", flush=True)
         client = AsyncOpenAI(
             base_url=os.environ["LITELLM_URL"].rstrip("/") + "/v1",
             api_key=os.environ["LITELLM_KEY"],
         )
         asyncio.run(run_judging(
-            client, matchups, transcripts, args.dimension, args.judge_model,
+            client, matchups, args.judges, transcripts, args.dimension,
             comparisons_path, args.seed, concurrency=args.concurrency, timeout_s=args.timeout_s,
         ))
 
-    cost = summarize_cost(comparisons_path)
-    print(f"Judging: {cost['n_ok']} ok, {cost['n_error']} errors, "
-          f"{cost['prompt_tokens'] + cost['completion_tokens']} tokens, "
-          f"~${cost['cost_usd_est']:.4f} estimated ({args.judge_model})", flush=True)
+    cost_by_judge = summarize_cost_by_judge(comparisons_path)
+    cost_total = summarize_cost_total(cost_by_judge)
+    print("\n=== Judging cost/usage by judge ===", flush=True)
+    for judge in args.judges:
+        c = cost_by_judge.get(judge, {"n_ok": 0, "n_error": 0, "prompt_tokens": 0, "completion_tokens": 0, "cost_usd_est": 0.0})
+        print(f"  {judge}: {c['n_ok']} ok, {c['n_error']} err, "
+              f"{c['prompt_tokens'] + c['completion_tokens']} tokens, ~${c['cost_usd_est']:.4f} est.", flush=True)
+    print(f"  TOTAL: {cost_total['n_ok']} ok, {cost_total['n_error']} err, "
+          f"~${cost_total['cost_usd_est']:.4f} estimated across all judges", flush=True)
 
-    # --- 3. fit + validate ---------------------------------------------------
-    rows = []
+    # --- 3. fit a separate BT scale per judge + validate --------------------
+    all_rows = []
     with comparisons_path.open("r", encoding="utf-8") as f:
         for line in f:
             rec = json.loads(line)
             if rec.get("status") == "ok":
-                rows.append(rec)
-    comparisons = pd.DataFrame(rows)[["item_i", "item_j", "winner"]]
+                all_rows.append(rec)
+    comparisons_all = pd.DataFrame(all_rows)
 
-    bt = fit_bt_logit(comparisons, identifiers)
-    choix_est = fit_bt_choix(comparisons, identifiers)
-    scores = build_scores_table(bt, choix_est, usable_items)
-    scores.to_csv(scores_path)
+    strengths_by_judge: dict[str, pd.Series] = {}
+    scores_by_judge: dict[str, pd.DataFrame] = {}
+    year_corr_by_judge: dict[str, dict | None] = {}
 
-    validation = validate_scale(scores.reset_index().rename(columns={"index": "identifier"}))
+    for judge in args.judges:
+        sub = comparisons_all[comparisons_all["model"] == judge][["item_i", "item_j", "winner"]]
+        if len(sub) < 10:
+            print(f"\n[skip] {judge}: only {len(sub)} 'ok' comparisons, need >= 10 to fit", flush=True)
+            continue
+        bt = fit_bt_logit(sub, identifiers)
+        choix_est = fit_bt_choix(sub, identifiers)
+        scores = build_scores_table(bt, choix_est, usable_items)
+        judge_slug = re.sub(r"[^a-zA-Z0-9_.-]+", "_", judge)
+        scores.to_csv(scores_by_judge_dir / f"{judge_slug}.csv")
 
-    print("\n=== Bradley-Terry scale ===", flush=True)
-    print(scores[["strength", "se", "n_matchups", "rank", "year", "speaker"]].to_string(), flush=True)
+        scores_by_judge[judge] = scores
+        strengths_by_judge[judge] = scores["strength"]
 
-    print("\n=== Cross-check: statsmodels-logit vs choix rank correlation ===", flush=True)
-    rank_corr = scores["strength"].corr(scores["choix_strength"], method="spearman")
-    print(f"Spearman(logit strength, choix strength) = {rank_corr:.3f}", flush=True)
+        validation = validate_scale(scores.reset_index().rename(columns={"index": "identifier"}))
+        year_corr_by_judge[judge] = validation["spearman_strength_vs_year"]
 
-    print("\n=== Validation ===", flush=True)
-    sy = validation["spearman_strength_vs_year"]
-    if sy:
-        print(f"Spearman(strength, year): rho={sy['rho']:.3f}, p={sy['p']:.4f}, n={sy['n']}", flush=True)
-    else:
-        print("Spearman(strength, year): not enough items with a known year", flush=True)
-    print("\nMean strength by speaker:", flush=True)
-    print(validation["by_speaker"].to_string(), flush=True)
+        rank_corr_choix = scores["strength"].corr(scores["choix_strength"], method="spearman")
+        print(f"\n=== Bradley-Terry scale: {judge} ({len(sub)} comparisons) ===", flush=True)
+        print(scores[["strength", "se", "n_matchups", "rank", "year", "speaker"]].to_string(), flush=True)
+        print(f"Spearman(logit strength, choix strength) = {rank_corr_choix:.3f} "
+              f"(regularized={bool(bt['regularized'].iloc[0])})", flush=True)
+        sy = year_corr_by_judge[judge]
+        if sy:
+            print(f"Spearman(strength, year): rho={sy['rho']:.3f}, p={sy['p']:.4f}, n={sy['n']}", flush=True)
+        else:
+            print("Spearman(strength, year): not enough items with a known year", flush=True)
+
+    if not scores_by_judge:
+        raise SystemExit("No judge produced enough comparisons to fit a BT scale.")
+
+    # Long-format combined table across judges, for viz + spot-checking.
+    combined = pd.concat(
+        [df.reset_index().rename(columns={"index": "identifier"}).assign(judge=judge)
+         for judge, df in scores_by_judge.items()],
+        ignore_index=True,
+    )
+    combined.to_csv(output_dir / "scores_all_judges.csv", index=False)
+
+    # --- 4. judge x judge agreement -----------------------------------------
+    rank_corr_matrix = judge_rank_correlation(strengths_by_judge)
+    rank_corr_matrix.to_csv(output_dir / "judge_rank_correlation.csv")
+    print("\n=== Judge x judge Spearman rank-correlation matrix (BT scales) ===", flush=True)
+    print(rank_corr_matrix.round(3).to_string(), flush=True)
+
+    print("\n=== BT-vs-year Spearman correlation per judge ===", flush=True)
+    for judge, sy in year_corr_by_judge.items():
+        if sy:
+            print(f"  {judge}: rho={sy['rho']:.3f}, p={sy['p']:.4f}, n={sy['n']}", flush=True)
+        else:
+            print(f"  {judge}: not enough items with a known year", flush=True)
+
+    # --- 5. visualizations ---------------------------------------------------
+    viz_summary = render_all(
+        output_dir=output_dir,
+        scores_by_judge=scores_by_judge,
+        rank_corr_matrix=rank_corr_matrix,
+        cost_by_judge=cost_by_judge,
+        year_corr_by_judge=year_corr_by_judge,
+        dimension=args.dimension,
+    )
+    print(f"\nViz index: {viz_summary['index_html']}", flush=True)
 
     print(f"\nDimension judged: {args.dimension}", flush=True)
-    print(f"Wrote: {scores_path}, {comparisons_path}, {transcripts_dir}/", flush=True)
+    print(f"Wrote: {output_dir}/, {comparisons_path}, {transcripts_dir}/", flush=True)
     if transcribe_failures:
         print(f"Transcription failures: {transcribe_failures}", flush=True)
 

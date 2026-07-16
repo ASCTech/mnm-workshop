@@ -26,6 +26,7 @@ from openai import OpenAI
 
 import llm
 import scoring
+import viz
 from schema import CodedRecord, QUESTIONS, Usage
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -38,18 +39,30 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST,
                      help="pmc_oa manifest.jsonl (run data_acquisition/fetch_pmc_oa.py first)")
     ap.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    ap.add_argument("--n-articles", type=int, default=12,
+    ap.add_argument("--n-articles", type=int, default=10,
                      help="Number of articles to code, taken from the front of the manifest")
-    ap.add_argument("--models", nargs="*", default=llm.DEFAULT_MODELS,
-                     help="LiteLLM proxy model ids to compare")
+    ap.add_argument("--models", nargs="*", default=None,
+                     help="LiteLLM proxy model ids to compare (overrides --model-group)")
+    ap.add_argument("--model-group", choices=sorted(llm.TIER_GROUPS), default="default",
+                     help="Named model roster: 'default' is a ~6-model spread across families "
+                          "and capability tiers; 'claude-tiers'/'gpt-tiers'/'gemini-tiers' hold "
+                          "one family's small/medium/large models for a tier comparison; 'all' "
+                          "is the full roster (includes slow kimi-k2.5). Ignored if --models is given.")
     ap.add_argument("--n-runs", type=int, default=2, help="Repeated runs per model-article pair")
-    ap.add_argument("--temperature", type=float, default=0.3)
+    ap.add_argument("--temperature", type=float, default=0.3,
+                     help="Sampling temperature (some models only support their fixed default; "
+                          "handled automatically, see llm.NO_CUSTOM_TEMPERATURE)")
     ap.add_argument("--char-budget", type=int, default=8000,
                      help="Max characters of article text sent to the model")
     ap.add_argument("--max-workers", type=int, default=6, help="Parallel LLM calls")
     ap.add_argument("--html", dest="html", action=argparse.BooleanOptionalAction, default=True,
                      help="Also write an HTML summary report")
-    return ap.parse_args()
+    ap.add_argument("--viz", dest="viz", action=argparse.BooleanOptionalAction, default=True,
+                     help="Also render the plotly viz/index.html dashboard")
+    args = ap.parse_args()
+    if args.models is None:
+        args.models = llm.TIER_GROUPS[args.model_group]
+    return args
 
 
 def load_articles(manifest_path: Path, n_articles: int, char_budget: int) -> list[tuple[str, str]]:
@@ -297,6 +310,18 @@ def main() -> None:
     print("  - cost_by_model.csv")
     if args.html:
         print("  - report.html")
+
+    if args.viz:
+        index_path = viz.render_all(
+            output_dir=args.output_dir,
+            in_scope=in_scope,
+            models=args.models,
+            agreement_df=agreement_df,
+            consistency_df=consistency_df,
+            cost_df=cost_df,
+        )
+        print(f"  - viz/index.html")
+        print(f"\nViz dashboard: {index_path}")
 
 
 if __name__ == "__main__":
