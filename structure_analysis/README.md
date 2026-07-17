@@ -1,12 +1,12 @@
 # structure_analysis
 
-**Archetype:** *Extraction → clustering* (after `syllabi` in
-`../WORKSHOP_ARCHETYPES.md`). The original: 1,716 syllabi / 79 courses →
-**5-field LLM extraction** → embeddings → **BERTopic** (UMAP + HDBSCAN) → a topic
-hierarchy that fed real college course-planning decisions. This is the
-"extract then analyze" two-stage shape. The unlock here is *capability, not
-cost*: corpus-wide topic clustering was out of reach for a domain expert alone —
-a computational-methods skill, not just effort.
+**The case study:** extraction → clustering. This branch is modeled on a project that
+took 1,716 syllabi across 79 courses → **5-field LLM extraction** → embeddings →
+**BERTopic** (UMAP + HDBSCAN) → a topic hierarchy that ended up feeding real
+college-level course-planning decisions. It's the "extract, then analyze" two-stage
+shape. What made this one interesting to us was that the gap was *capability, not
+cost*: corpus-wide topic clustering isn't something the researcher could have
+assembled alone — it's a computational-methods skill, not just effort.
 
 **Data:** two openly-licensed stand-ins, both from `../data_acquisition/`:
 

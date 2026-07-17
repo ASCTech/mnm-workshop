@@ -69,16 +69,17 @@ Every branch is **resumable**: `results.jsonl` / `comparisons.jsonl` / cached
 transcripts and embeddings mean a re-run only does the missing work. Re-running with
 a larger `--n-articles` / `--limit` extends rather than redoes.
 
-## Reliability house rules (why re-runs stay clean)
+## Reliability, and why we lean on it
 
-Attendees run these repeatedly, sometimes without a GPU. The house style:
+Attendees run these repeatedly, sometimes without a GPU, so reliability ended up
+mattering more than speed. A couple of things we've stuck to:
 
 - **Prefer determinism and portability over speed.** `structure_analysis` pins the
   MiniLM embedder to CPU and numba/OpenMP to a single fork-safe thread, and seeds
   UMAP — so clustering is reproducible and needs no GPU. Fetchers take `--seed`.
 - **Exit cleanly — no hangs, no zombie processes.** A pipeline that needs a manual
   `kill` undercuts the whole "run it yourself" premise.
-- **Recognize the two cautionary tales in this repo:**
+- **Two times this bit us, worth knowing about:**
   - `structure_analysis` once appeared to "hang at exit." The real cause was a
     self-deadlock in `CostLedger.summary_lines()` re-acquiring a non-reentrant
     `Lock`. It *looked* like a threading/numba problem but wasn't — it was fixed at

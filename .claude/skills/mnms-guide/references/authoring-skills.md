@@ -1,10 +1,10 @@
 # Authoring your own skill
 
-This is the meta-step. The workshop's thesis is that the durable win is *packaging a
-capability so you can invoke it instead of rebuilding it* (see
+This is the meta-step. One thing we keep coming back to is that the durable win is
+*packaging a capability so you can invoke it instead of rebuilding it* (see
 `the-argument.md`). A skill is exactly that packaging for a coding agent — and the
-`mnms-guide` skill you're reading is the worked example. This file teaches you to
-make your own by dissecting this one.
+`mnms-guide` skill you're reading is a worked example. This file walks through how to
+make your own by taking this one apart.
 
 ## What a skill actually is
 
@@ -37,7 +37,7 @@ body when the description matches the task. So:
   skill" — the phrasings a researcher uses.
 - **Keep the body short.** It's a router, not a manual.
 
-## The one design rule: progressive disclosure
+## The habit that helps most: progressive disclosure
 
 Don't cram everything into `SKILL.md`. Split depth into `references/` files and have
 the body point to them, so the agent loads only what the current question needs.
@@ -45,13 +45,12 @@ the body point to them, so the agent loads only what the current question needs.
 `reading-results.md`, and this file are pulled in individually. That keeps the
 always-on context cost tiny.
 
-## The second rule: route, don't duplicate
+## The other one: route, don't duplicate
 
-This skill deliberately does **not** restate `WORKSHOP_ARCHETYPES.md`, the branch
-`README.md`s, or the code comments. It points *into* them. Single source of truth:
-when the archetype doc changes, the skill doesn't rot. When you write your own,
-reference your existing docs instead of copying them — a duplicated skill is a skill
-that will silently go stale.
+This skill deliberately does **not** restate the branch `README.md`s or the code
+comments. It points *into* them. Single source of truth: when a branch changes, the
+skill doesn't rot. When you write your own, reference your existing docs instead of
+copying them — a duplicated skill is a skill that will silently go stale.
 
 ## How to build one from a research method (the workshop move)
 

@@ -1,12 +1,12 @@
 # corpus_coding
 
-**Archetype:** *Multi-model corpus coding* (after `article_coding` in
-`../WORKSHOP_ARCHETYPES.md`). The flagship case: 1,099 PDFs run through a
-10-question codebook across ~5 model-runs (5,120 results), then scored for
-**inter-model agreement** and **intra-model consistency**, with a pre-spend cost
-estimator. The argument it makes: the grunt-work coding was merely expensive, but
-*instrument iteration and model-agreement reliability* were the real unlock — 15×
-redundant coding for reliability is infeasible by hand.
+**The case study:** multi-model corpus coding. This branch is modeled on a project
+where we coded 1,099 PDFs through a 10-question codebook across ~5 model-runs (5,120
+results), then scored **inter-model agreement** and **intra-model consistency**, with
+a cost estimate produced before anything was spent. What stuck with us afterward: the
+grunt-work coding was only ever *expensive* — doable, just slow and costly. The part
+that had actually been out of reach was the reliability work, running the codebook
+15× over for redundancy, which nobody does by hand.
 
 **Data:** the openly-licensed stand-in for paywalled article PDFs —
 `../data_acquisition/fetch_pmc_oa.py`, which pulls the **PMC Open Access subset**

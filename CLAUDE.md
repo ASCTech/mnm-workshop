@@ -8,16 +8,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > to run it, how to read its output — immediately load the `mnms-guide` skill** (under
 > `.claude/skills/`, invocable as `/mnms-guide`) before answering. Do not rely on it being
 > triggered automatically; load it proactively at the first such question, then answer from
-> it. It is the maintained tour of the repo and routes to the authoritative docs.
+> it. It is the maintained tour of the repo and routes to the right docs.
 
 ## What this repo is
 
-`mnms` is a **workshop reference implementation** for a conference workshop on agentic
-tooling for academic researchers. It builds *openly-licensed, redistributable* stand-ins
-for a set of private research-consulting projects (OSU Arts & Sciences / ASC-ETS). Read
-`WORKSHOP_ARCHETYPES.md` first — it is the design document that motivates every branch,
-mapping each workspace member to the real ("archetype") project it demonstrates and to the
-"what did agents actually unlock" argument the workshop makes.
+`mnms` is a set of runnable **case studies** for a conference workshop on agentic tooling
+for academic researchers. Each branch is an *openly-licensed, redistributable* rebuild of a
+real research-consulting project we did in OSU Arts & Sciences (ASC-ETS), on public data so
+it can be shared. The workshop's point isn't any single tool — it's the *process* we've
+landed on after working with a lot of researchers across a lot of fields; the branches are
+how we show that process through concrete examples.
+
+`WORKSHOP_ARCHETYPES.md` is our **internal** recon note — it maps each branch to the private
+project it's modeled on and lays out the "what did agents actually unlock" argument. It's
+useful background for working here, but it is *not* part of the published repo, so don't
+point public-facing docs at it; the README, the branch READMEs, and the `mnms-guide` skill
+carry the argument on their own.
 
 The recurring shape of every branch is **corpus in → structured data out**, with
 multi-model comparison and cost accounting, driven through the OSU **LiteLLM proxy**.
@@ -25,10 +31,10 @@ multi-model comparison and cost accounting, driven through the OSU **LiteLLM pro
 ## Layout: a uv workspace of independent branches
 
 This is a `uv` workspace (root `pyproject.toml`, `[tool.uv.workspace]`). Each member is a
-self-contained "branch" demonstrating one archetype. All five are now implemented and
+self-contained "branch" built around one case study. All five are now implemented and
 produce results end-to-end:
 
-| Member | Archetype (private original) | Status |
+| Member | Modeled on (private original) | Status |
 |---|---|---|
 | `data_acquisition/` | — (supplies data for all others) | **working** — polite, resumable fetchers for openly-licensed corpora |
 | `transcription/` | ASR / `opi-transcript` | **working** — Granite-Speech on Common Voice, WER scoring |
@@ -36,7 +42,7 @@ produce results end-to-end:
 | `structure_analysis/` | `syllabi` — LLM extraction → BERTopic clustering | **working** — extract → local MiniLM embeddings → BERTopic (UMAP+HDBSCAN) → validate vs. ground-truth label (ARI/NMI/homogeneity); CSVs + Plotly `viz/` |
 | `bt_scoring/` | `podcasts` — pairwise LLM-judge → Bradley-Terry scale | **working** — Granite ASR → pairwise multi-judge → Bradley-Terry scale w/ SEs + judge rank-correlation; CSVs + Plotly `viz/` |
 
-Each branch's README describes its archetype and which `data_acquisition` fetcher feeds it.
+Each branch's README describes the case study it's modeled on and which `data_acquisition` fetcher feeds it.
 `data_acquisition` is the shared data layer: **run its fetcher first**, producing a
 git-ignored `data_acquisition/data/<source>/` tree plus a JSON-Lines manifest, before
 running the branch that consumes it.
@@ -82,7 +88,10 @@ A single git-ignored `.env` at the repo root holds every secret; each branch loa
 
 Never write a key into a tracked config file or a flake — everything reads from `.env`.
 
-## Conventions to follow
+## Conventions we've settled into
+
+These are habits from the original projects that earned their keep; keep to them so the
+branches stay consistent and easy to hand off.
 
 - **Data acquisition is deliberately polite.** All fetchers go through
   `data_acquisition/common.py::PoliteSession`: identifying User-Agent, per-host rate limit
@@ -90,10 +99,10 @@ Never write a key into a tracked config file or a flake — everything reads fro
   **skip files already present** so re-runs resume. New fetchers should use it, expose a
   `--limit` (start small), and write a JSON-Lines manifest recording ids, licenses, and
   paths. Only fetch openly-licensed / public-domain data — the point is redistributability.
-- **Resumability and per-item resilience** are the house style: cache/skip completed work,
-  record per-document failures instead of aborting the batch.
-- The LLM branches should produce **Pydantic-schema JSON** and account for cost, matching
-  the archetypes in `WORKSHOP_ARCHETYPES.md`.
+- **Resumability and per-item resilience** are the norm we hold to: cache/skip completed
+  work, record per-document failures instead of aborting the batch.
+- The LLM branches should produce **Pydantic-schema JSON** and account for cost, the way the
+  original projects did.
 - **Reliable, clean re-runs are a first-class requirement** — attendees run these branches
   themselves, repeatedly, sometimes without a GPU. Prefer determinism and portability over
   speed (e.g. `structure_analysis` pins MiniLM to CPU and numba to a single fork-safe

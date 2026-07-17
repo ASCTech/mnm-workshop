@@ -12,25 +12,27 @@ description: >-
 
 # mnms workshop guide
 
-`mnms` is a **workshop reference implementation**: openly-licensed, redistributable
-stand-ins for real OSU research-consulting projects. Every branch has the same
-shape — **corpus in → structured data out**, multi-model, cost-accounted, routed
+`mnms` is a set of runnable **case studies** for a workshop on agentic tooling for
+researchers: openly-licensed, redistributable rebuilds of real OSU
+research-consulting projects. They came out of working with a lot of researchers
+across a lot of fields — the tools differed every time, but a shape kept recurring:
+**corpus in → structured data out**, usually multi-model, cost-accounted, routed
 through the OSU LiteLLM proxy.
 
 Your job when this skill is active is to **orient and explain**, not to rebuild
-anything. Route people to the right branch, help them run it, and help them read
-what comes out. The full design argument lives in `WORKSHOP_ARCHETYPES.md` and each
-branch's own `README.md` — point *into* those rather than restating them.
+anything. Help people find the branch closest to what they're doing, get it running,
+and read what comes out. The branch `README.md`s and the reference files below carry
+the details — point *into* those rather than restating them.
 
 ## The branches
 
-| Member | Stands in for | One-liner |
+| Member | Modeled on | One-liner |
 |---|---|---|
 | `data_acquisition/` | — | Polite, resumable fetchers → `data/<source>/` + a JSONL manifest. Feeds everything else. |
-| `corpus_coding/` | `article_coding` | Codes a corpus with several models × repeated runs → inter-model **agreement** + intra-model **consistency** + cost. |
-| `structure_analysis/` | `syllabi` | LLM field extraction → local embeddings → **BERTopic** clusters → validated against a held-out label. |
-| `bt_scoring/` | `podcasts` | Pairwise **LLM-as-judge** over transcripts → a **Bradley-Terry** scale with standard errors. |
-| `transcription/` | `opi-transcript` | Granite-Speech ASR on Common Voice, WER scoring (the self-hosted ASR counterpart). |
+| `corpus_coding/` | a multi-model coding study | Codes a corpus with several models × repeated runs → inter-model **agreement** + intra-model **consistency** + cost. |
+| `structure_analysis/` | a syllabus-clustering study | LLM field extraction → local embeddings → **BERTopic** clusters → validated against a held-out label. |
+| `bt_scoring/` | a pairwise-judging study | Pairwise **LLM-as-judge** over transcripts → a **Bradley-Terry** scale with standard errors. |
+| `transcription/` | self-hosted ASR work | Granite-Speech ASR on Common Voice, WER scoring. |
 
 ## Where to go next
 
@@ -41,10 +43,13 @@ Load only the reference file the question needs:
 - **I'm looking at an output file and don't know what it means** → `references/reading-results.md`
 - **How do I turn my own method into a skill like this one?** → `references/authoring-skills.md`
 
-## Two things to model for people
+## Two things worth surfacing as you help
 
-1. **Everything is `corpus in → structured data out`.** When someone describes a
-   research task, map it onto that shape and onto whichever branch is closest.
-2. **Reliability is a feature here.** Attendees re-run these repeatedly, sometimes
-   on machines without a GPU. Prefer determinism and a clean exit over speed, and
-   flag anything that hangs or leaves stray processes. See `running-branches.md`.
+1. **The recurring shape is `corpus in → structured data out`.** It's not a rule to
+   impose — but when someone describes a research task, it's often useful to map it
+   onto that shape and onto whichever branch is closest. That's usually the fastest
+   way to a running starting point.
+2. **Reliability turned out to matter a lot.** Attendees re-run these repeatedly,
+   sometimes on machines without a GPU, so we've leaned toward determinism and a
+   clean exit over speed. If something hangs or leaves stray processes, it's worth
+   flagging — see `running-branches.md` for the two times this bit us.

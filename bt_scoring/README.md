@@ -1,12 +1,12 @@
 # bt_scoring
 
-**Archetype:** *LLM-as-judge → statistics* (after `podcasts` in
-`../WORKSHOP_ARCHETYPES.md`). The original: pairwise political-orientation scoring
-(each podcast ≥50 matchups) → a **Bradley-Terry** left–right scale with standard
-errors, via an async worker pool with checkpointing and retry. Its argument is the
-strongest of the three: the study is *effectively impossible by hand* (10k+
-pairwise comparisons; humans can't hold hundreds of shows in mind) — it only works
-because the judge is **cheap + consistent**. Reliability is the unlock.
+**The case study:** LLM-as-judge → statistics. This branch is modeled on a project
+that scored items pairwise for political orientation (each podcast ≥50 matchups) → a
+**Bradley-Terry** left–right scale with standard errors, via an async worker pool with
+checkpointing and retry. This is the one that most changed how we think about what
+agents make possible: the study is *effectively impossible by hand* (10k+ pairwise
+comparisons; no one can hold hundreds of shows in mind at once). It only works because
+the judge is **cheap and consistent** — reliability is the unlock, not raw capability.
 
 **Data:** the openly-licensed stand-in — `../data_acquisition/fetch_presidential_audio.py`,
 which pulls **public-domain presidential audio** from the Internet Archive

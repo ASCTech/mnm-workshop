@@ -18,7 +18,7 @@ they regenerate when you re-run, so read them as calibration, not constants.
 - κ near **0.2** on an open-ended question (e.g. `primary_field`) = models genuinely
   diverge. Not necessarily a bug — it says the *question* is subjective, which is
   itself a finding about your instrument.
-- **The trap to teach:** a question can show **98.9% agreement but κ = 0.0**
+- **The one that trips people up:** a question can show **98.9% agreement but κ = 0.0**
   (`open_data_statement` did). That's the **kappa paradox** — when almost every
   article gets the same label, there's no variance for chance-corrected agreement to
   credit, so κ collapses even though raw agreement is high. Read `pct_agreement` and
@@ -84,11 +84,14 @@ fishing for a correlation.
 
 ---
 
-## A general reading discipline to model
+## How we've learned to read these
 
-- Look at **agreement/reliability before headline numbers** — an unreliable
+A few habits that have saved us from over-claiming:
+
+- Look at **agreement/reliability before the headline numbers** — an unreliable
   instrument makes the rest meaningless.
 - Report **outliers, nulls, and regularization** rather than hiding them; in this
-  repo they're features of the honest telling.
-- Tie any model choice back to the **cost table**. "Good enough, and here's what it
-  cost" is the whole argument.
+  repo they're part of the honest telling, and they usually make the result *more*
+  credible, not less.
+- Tie any model choice back to the **cost table**. "Good enough for this question,
+  and here's what it cost" is the argument we keep coming back to.

@@ -1,9 +1,10 @@
 # data_acquisition
 
-Capped, polite retrieval of **openly-licensed** corpora that stand in for the
-private datasets behind the workshop branches (see `../WORKSHOP_ARCHETYPES.md`).
-The transcription branch already runs on **Common Voice (CC0)**; these fetchers
-give the other branches redistributable data with the same analytical shape.
+Capped, polite retrieval of **openly-licensed** corpora that stand in for the private
+datasets behind the workshop branches. The originals we can't share; these fetchers
+give each branch redistributable data with the same analytical shape, so the case
+studies actually run for anyone who clones the repo. The transcription branch already
+runs on **Common Voice (CC0)**.
 
 Each source is a **separate script**. All caps start small; raise `--limit` when
 you're ready.
