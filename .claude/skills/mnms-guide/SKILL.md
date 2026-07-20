@@ -31,7 +31,7 @@ the details — point *into* those rather than restating them.
 | `data_acquisition/` | — | Polite, resumable fetchers → `data/<source>/` + a JSONL manifest. Feeds everything else. |
 | `corpus_coding/` | a multi-model coding study | Codes a corpus with several models × repeated runs → inter-model **agreement** + intra-model **consistency** + cost. |
 | `structure_analysis/` | a syllabus-clustering study | LLM field extraction → local embeddings → **BERTopic** clusters → validated against a held-out label. |
-| `bt_scoring/` | a pairwise-judging study | Pairwise **LLM-as-judge** over transcripts → a **Bradley-Terry** scale with standard errors. |
+| `bt_scoring/` | a pairwise-judging study | Pairwise **LLM-as-judge** over SOTU address texts (economic left↔right) → a **Bradley-Terry** scale with SEs, validated against party. |
 | `transcription/` | self-hosted ASR work | Granite-Speech ASR on Common Voice, WER scoring. |
 
 ## Where to go next

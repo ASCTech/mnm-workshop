@@ -1,5 +1,29 @@
 # mnms
 
+## Mind and Machine Alignment Summit Workshop - AI in Research Case Studies
+
+This is the companion repository for part of The Ohio State University's Emerging Technology
+Studio's workshop for the Mind and Machine Alignment Summit. Reproduced here are several 
+archetypal case studies of real work we've done with researchers, faculty, and staff. 
+Each of tbe case studies uses data that is permissively licensed or public domain
+so anyone is free to share, remix, and adapt as they'd like. Likewise, the repository
+is Apache 2.0 licensed so you can do so similarly with the code here.
+
+Over the past three or four years the field of AI has moved so fast the primary constant
+has been change. So rather than a snapshot of how we do things at any particular time
+this repository aims to communicate more the processes on top of existing capabilities
+so hopefully future changes layer on top. Over this time we've worked with dozens of
+researchers, faculty, staff, and students across 
+
+---
+
+Many, but not all, of the engagements we've worked in have had a similar form:
+structured, semi-structured, or unstructured data/corpus in, structured analysis out.
+Many had substantial overlap in requirements and approaches, and these case studies are
+meant to be representations of several kinds of them. Keep in mind that these are 
+meant to be both useful examples but also products of process, depending on how you want
+to look at them.
+
 A set of runnable **case studies** for a conference workshop on *agentic tooling for
 academic researchers*, put together by the research-consulting team in OSU Arts &
 Sciences (ASC-ETS). Each branch is an openly-licensed, redistributable rebuild of a

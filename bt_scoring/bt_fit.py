@@ -1,5 +1,5 @@
 """Fit a Bradley-Terry scale (with standard errors) from pairwise verdicts,
-and validate it against year / speaker metadata the judge never saw.
+and validate it against party / year metadata the judge never saw.
 
 BT-as-logistic-regression: for each judged pair (i, j) with i < j
 lexicographically, code x_i = +1, x_j = -1 (all other items 0), and
@@ -19,7 +19,7 @@ import choix
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-from scipy.stats import spearmanr
+from scipy.stats import mannwhitneyu, pointbiserialr, spearmanr
 
 
 def build_design(comparisons: pd.DataFrame, items: list[str], reference: str) -> tuple[pd.DataFrame, pd.Series]:
@@ -136,19 +136,61 @@ def judge_rank_correlation(strengths_by_judge: dict[str, pd.Series]) -> pd.DataF
 
 
 def validate_scale(scores: pd.DataFrame) -> dict:
-    """scores must have columns strength, year, speaker (year may have NaNs)."""
+    """Validate a fitted BT scale against metadata the judge never saw.
+
+    ``scores`` must have a ``strength`` column and may carry ``year``,
+    ``party`` (values "Republican"/"Democrat"), and ``president``.
+
+    The primary check for an economic-orientation scale is **party**: if the
+    emergent left/right scale tracks anything real, Republican-delivered
+    speeches should sit higher (more "right") than Democratic ones. We report
+    a point-biserial correlation (party coded right=1/left=0, so a positive
+    value means the scale aligns "right = higher strength") and a
+    Mann-Whitney U rank test. ``year`` is kept as a secondary, non-causal
+    trend check.
+    """
     result: dict = {}
-    with_year = scores.dropna(subset=["year"])
+
+    # --- party (primary): does the scale separate Republicans from Democrats?
+    if "party" in scores.columns:
+        parties = scores[["strength", "party"]].dropna(subset=["party"])
+        parties = parties[parties["party"].isin(["Republican", "Democrat"])]
+        r_str = parties.loc[parties["party"] == "Republican", "strength"]
+        d_str = parties.loc[parties["party"] == "Democrat", "strength"]
+        if len(r_str) >= 2 and len(d_str) >= 2:
+            party_bin = (parties["party"] == "Republican").astype(int)  # right=1, left=0
+            r_pb, p_pb = pointbiserialr(party_bin, parties["strength"])
+            u, p_u = mannwhitneyu(r_str, d_str, alternative="two-sided")
+            result["strength_vs_party"] = {
+                "pointbiserial_r": float(r_pb), "pointbiserial_p": float(p_pb),
+                "mannwhitney_u": float(u), "mannwhitney_p": float(p_u),
+                "n_republican": int(len(r_str)), "n_democrat": int(len(d_str)),
+                "mean_republican": float(r_str.mean()), "mean_democrat": float(d_str.mean()),
+            }
+        else:
+            result["strength_vs_party"] = None
+    else:
+        result["strength_vs_party"] = None
+
+    # --- year (secondary): non-causal trend over time
+    with_year = scores.dropna(subset=["year"]) if "year" in scores.columns else scores.iloc[0:0]
     if len(with_year) >= 3:
         rho, p = spearmanr(with_year["strength"], with_year["year"])
         result["spearman_strength_vs_year"] = {"rho": rho, "p": p, "n": len(with_year)}
     else:
         result["spearman_strength_vs_year"] = None
 
-    by_speaker = (
-        scores.groupby("speaker")["strength"]
-        .agg(["mean", "std", "count"])
-        .sort_values("mean", ascending=False)
-    )
-    result["by_speaker"] = by_speaker
+    group_col = "president" if "president" in scores.columns else None
+    if group_col:
+        result["by_president"] = (
+            scores.groupby(group_col)["strength"]
+            .agg(["mean", "std", "count"])
+            .sort_values("mean", ascending=False)
+        )
+    if "party" in scores.columns:
+        result["by_party"] = (
+            scores.groupby("party")["strength"]
+            .agg(["mean", "std", "count"])
+            .sort_values("mean", ascending=False)
+        )
     return result

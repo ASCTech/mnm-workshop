@@ -40,7 +40,7 @@ produce results end-to-end:
 | `transcription/` | ASR / `opi-transcript` | **working** — Granite-Speech on Common Voice, WER scoring |
 | `corpus_coding/` | `article_coding` — multi-model codebook coding + agreement | **working** — codes N articles × several models × repeated runs → inter-model agreement (Cohen κ / Krippendorff α / Fleiss κ) + intra-model consistency + cost; CSVs, HTML report, Plotly `viz/` |
 | `structure_analysis/` | `syllabi` — LLM extraction → BERTopic clustering | **working** — extract → local MiniLM embeddings → BERTopic (UMAP+HDBSCAN) → validate vs. ground-truth label (ARI/NMI/homogeneity); CSVs + Plotly `viz/` |
-| `bt_scoring/` | `podcasts` — pairwise LLM-judge → Bradley-Terry scale | **working** — Granite ASR → pairwise multi-judge → Bradley-Terry scale w/ SEs + judge rank-correlation; CSVs + Plotly `viz/` |
+| `bt_scoring/` | `podcasts` — pairwise LLM-judge → Bradley-Terry scale | **working** — SOTU address texts → pairwise multi-judge on economic left/right → Bradley-Terry scale w/ SEs + judge rank-correlation, validated vs. party; CSVs + Plotly `viz/` |
 
 Each branch's README describes the case study it's modeled on and which `data_acquisition` fetcher feeds it.
 `data_acquisition` is the shared data layer: **run its fetcher first**, producing a
@@ -65,12 +65,12 @@ Acquire data first, then run the branch that consumes it. Run a branch's script 
 uv run --package data_acquisition python data_acquisition/fetch_pmc_oa.py --limit 30 --seed 7
 uv run --package data_acquisition python data_acquisition/fetch_arxiv_metadata.py --limit 800 --seed 7
 uv run --package data_acquisition python data_acquisition/fetch_nsf_awards.py --limit 500 --keyword "topic modeling"
-uv run --package data_acquisition python data_acquisition/fetch_presidential_audio.py --limit 60 --seed 7
+uv run --package data_acquisition python data_acquisition/fetch_sotu.py
 
 # branches (each reads the corresponding data/<source>/ manifest)
 uv run --package corpus_coding python corpus_coding/main.py --n-articles 10 --model-group default
 uv run --package structure_analysis python structure_analysis/main.py --source arxiv --limit 600
-uv run --package bt_scoring python bt_scoring/main.py --num-items 0 --min-matchups 8
+uv run --package bt_scoring python bt_scoring/main.py --num-items 0 --min-matchups 6
 uv run --package transcription python transcription/main.py
 ```
 
@@ -109,8 +109,10 @@ branches stay consistent and easy to hand off.
   thread; fetchers take `--seed`), and ensure each branch **exits cleanly with no lingering
   processes**. When touching cost/ledger, clustering, or exit paths, verify a clean exit —
   a past "exit hang" was really a self-deadlock in `CostLedger.summary_lines()`, and
-  `bt_scoring` ends with a deliberate, documented `os._exit(0)` to dodge an ASR-stack
-  shutdown hang.
+  `transcription` ends with a deliberate, documented `os._exit(0)` to dodge an ASR-stack
+  shutdown hang. (`bt_scoring` needed the same trick when it ran Granite ASR on
+  presidential audio; it has since moved to SOTU **text** — `fetch_sotu.py`, judged on
+  economic left/right — so it no longer loads torch and exits normally.)
 
 ## envs/ — coding-agent environments (not application code)
 

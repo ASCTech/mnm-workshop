@@ -13,10 +13,5 @@ dependencies = [
     "scipy>=1.13",
     "statsmodels>=0.14",
     "choix>=0.3.5",
-    "transformers>=4.44",
-    "librosa>=0.10",
-    "soundfile>=0.12",
-    "accelerate>=0.33",
-    "tqdm>=4.66",
     "plotly>=5.20",
 ]

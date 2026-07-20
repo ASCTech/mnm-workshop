@@ -4,16 +4,18 @@ Four figures + a landing page, written to <out-dir>/output/viz/:
 
   - forest.html   -- BT strength +/- SE per item, small multiples (one panel
                      per judge, each independently sorted by that judge's
-                     strength), points colored by speaker.
+                     strength), points colored by party.
   - scatter.html  -- BT strength vs. year (metadata the judge never saw),
-                     colored by speaker, with a dropdown to switch judge.
+                     colored by party, with a dropdown to switch judge. Reads
+                     as: does the emergent economic-left/right scale separate
+                     the parties, and does it drift over time?
   - heatmap.html  -- judge x judge Spearman rank-correlation of BT scales
                      (diverging colorscale, neutral midpoint at 0).
-  - summary.html  -- per-judge agreement/consistency/cost summary table.
+  - summary.html  -- per-judge party-alignment / cost / consistency table.
   - index.html    -- landing page linking the above.
 
 Color follows the dataviz-skill rules used elsewhere in the workshop: fixed,
-never-cycled hue order for categorical identity (speaker, judge), a diverging
+never-cycled hue order for categorical identity (party, judge), a diverging
 two-hue-plus-neutral-midpoint scale for the correlation heatmap (a polarity
 measure, not a magnitude), hover tooltips on every mark, and a legend
 whenever there are >= 2 series.
@@ -28,14 +30,11 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-# Fixed, never-cycled categorical palettes (Okabe-Ito colorblind-safe hues).
-SPEAKER_ORDER = ["FDR", "Nixon", "LBJ", "Unknown"]
-SPEAKER_COLORS = {
-    "FDR": "#0072B2",
-    "Nixon": "#D55E00",
-    "LBJ": "#009E73",
-    "Unknown": "#999999",
-}
+# Fixed, never-cycled categorical palette (Okabe-Ito colorblind-safe hues):
+# vermillion for Republican, blue for Democrat (conventional, and the two hues
+# stay distinct under the common colorblindness types).
+PARTY_ORDER = ["Democrat", "Republican"]
+PARTY_COLORS = {"Democrat": "#0072B2", "Republican": "#D55E00"}
 _JUDGE_HUES = ["#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9", "#F0E442"]
 
 # Diverging colorscale for a polarity measure (Spearman rho in [-1, 1]):
@@ -47,8 +46,8 @@ def _judge_palette(judges: list[str]) -> dict[str, str]:
     return {j: _JUDGE_HUES[i % len(_JUDGE_HUES)] for i, j in enumerate(judges)}
 
 
-def _speaker_colors(speakers: pd.Series) -> list[str]:
-    return [SPEAKER_COLORS.get(s, "#999999") for s in speakers]
+def _party_colors(parties: pd.Series) -> list[str]:
+    return [PARTY_COLORS.get(p, "#999999") for p in parties]
 
 
 def render_forest(scores_by_judge: dict[str, pd.DataFrame], viz_dir: Path) -> Path:
@@ -60,19 +59,20 @@ def render_forest(scores_by_judge: dict[str, pd.DataFrame], viz_dir: Path) -> Pa
 
     judges = list(scores_by_judge.keys())
     n = len(judges)
-    fig = make_subplots(rows=1, cols=n, shared_yaxes=False, subplot_titles=judges, horizontal_spacing=0.05)
+    fig = make_subplots(rows=1, cols=n, shared_yaxes=False, subplot_titles=judges, horizontal_spacing=0.06)
 
-    speakers_seen: set[str] = set()
+    parties_seen: set[str] = set()
     max_items = 1
     for col, judge in enumerate(judges, start=1):
         df = scores_by_judge[judge].sort_values("strength", ascending=True)
         max_items = max(max_items, len(df))
-        speakers_seen.update(df["speaker"].unique())
-        colors = _speaker_colors(df["speaker"])
+        parties_seen.update(df["party"].unique())
+        colors = _party_colors(df["party"])
         customdata = np.array(
             list(zip(
                 df["title"].fillna("").map(lambda s: html.escape(str(s))[:80]),
-                df["speaker"],
+                df["president"],
+                df["party"],
                 df["year"].fillna(-1),
                 df["n_matchups"],
                 df["se"],
@@ -89,9 +89,9 @@ def render_forest(scores_by_judge: dict[str, pd.DataFrame], viz_dir: Path) -> Pa
                 error_x=dict(type="data", array=df["se"], visible=True, thickness=1.2, width=3, color="#888"),
                 customdata=customdata,
                 hovertemplate=(
-                    "<b>%{y}</b><br>%{customdata[0]}<br>speaker: %{customdata[1]}"
-                    "<br>year: %{customdata[2]}<br>strength: %{x:.3f} (se=%{customdata[4]:.3f}, "
-                    "n=%{customdata[3]} matchups)<br>choix cross-check: %{customdata[5]:.3f}<extra></extra>"
+                    "<b>%{y}</b><br>%{customdata[0]}<br>%{customdata[1]} (%{customdata[2]})"
+                    "<br>year: %{customdata[3]}<br>strength: %{x:.3f} (se=%{customdata[5]:.3f}, "
+                    "n=%{customdata[4]} matchups)<br>choix cross-check: %{customdata[6]:.3f}<extra></extra>"
                 ),
                 showlegend=False,
             ),
@@ -100,26 +100,26 @@ def render_forest(scores_by_judge: dict[str, pd.DataFrame], viz_dir: Path) -> Pa
         )
         fig.update_xaxes(title_text="BT strength", zeroline=True, zerolinecolor="#ccc", row=1, col=col)
 
-    # Speaker legend as dummy off-canvas traces, fixed order, added once.
-    for speaker in SPEAKER_ORDER:
-        if speaker not in speakers_seen:
+    # Party legend as dummy off-canvas traces, fixed order, added once.
+    for party in PARTY_ORDER:
+        if party not in parties_seen:
             continue
         fig.add_trace(
             go.Scatter(
                 x=[None], y=[None], mode="markers",
-                marker=dict(color=SPEAKER_COLORS[speaker], size=10),
-                name=speaker, showlegend=True,
+                marker=dict(color=PARTY_COLORS[party], size=10),
+                name=party, showlegend=True,
             ),
             row=1, col=1,
         )
 
     fig.update_layout(
         title=f"Bradley-Terry forest plot per judge ({n} judges, each panel sorted by its own strength)",
-        height=max(520, 22 * max_items + 160),
+        height=max(520, 20 * max_items + 160),
         width=max(1100, 340 * n),
         plot_bgcolor="white",
-        margin=dict(l=110, r=40, t=90, b=60),
-        legend=dict(title="speaker", orientation="h", y=-0.05, yanchor="top"),
+        margin=dict(l=130, r=40, t=90, b=60),
+        legend=dict(title="party", orientation="h", y=-0.05, yanchor="top"),
         hoverlabel=dict(font_size=12, align="left"),
     )
     out = viz_dir / "forest.html"
@@ -128,17 +128,17 @@ def render_forest(scores_by_judge: dict[str, pd.DataFrame], viz_dir: Path) -> Pa
 
 
 def render_scatter(combined: pd.DataFrame, judges: list[str], viz_dir: Path) -> Path:
-    """Strength-vs-year scatter, colored by speaker, with a dropdown to
-    switch which judge's strength column is plotted (validation against
+    """Strength-vs-year scatter, colored by party, with a dropdown to switch
+    which judge's strength column is plotted (validation against party/year
     metadata the judge never saw)."""
     fig = go.Figure()
     n_judges = len(judges)
     for idx, judge in enumerate(judges):
         df = combined[combined["judge"] == judge].dropna(subset=["year"])
-        colors = _speaker_colors(df["speaker"])
+        colors = _party_colors(df["party"])
         customdata = np.array(
             list(zip(df["identifier"], df["title"].fillna("").map(lambda s: html.escape(str(s))[:80]),
-                     df["speaker"], df["n_matchups"])),
+                     df["president"], df["party"], df["n_matchups"])),
             dtype=object,
         )
         fig.add_trace(
@@ -147,23 +147,23 @@ def render_scatter(combined: pd.DataFrame, judges: list[str], viz_dir: Path) -> 
                 marker=dict(color=colors, size=10, line=dict(width=1, color="white")),
                 customdata=customdata,
                 hovertemplate=(
-                    "<b>%{customdata[0]}</b><br>%{customdata[1]}<br>speaker: %{customdata[2]}"
-                    "<br>year: %{x}<br>strength: %{y:.3f} (n=%{customdata[3]} matchups)<extra></extra>"
+                    "<b>%{customdata[0]}</b><br>%{customdata[1]}<br>%{customdata[2]} (%{customdata[3]})"
+                    "<br>year: %{x}<br>strength: %{y:.3f} (n=%{customdata[4]} matchups)<extra></extra>"
                 ),
                 name=judge, visible=(idx == 0), showlegend=False,
             )
         )
 
-    speakers_present = [s for s in SPEAKER_ORDER if s in set(combined["speaker"])]
-    for speaker in speakers_present:
+    parties_present = [p for p in PARTY_ORDER if p in set(combined["party"])]
+    for party in parties_present:
         fig.add_trace(
             go.Scatter(
                 x=[None], y=[None], mode="markers",
-                marker=dict(color=SPEAKER_COLORS[speaker], size=10),
-                name=speaker, showlegend=True,
+                marker=dict(color=PARTY_COLORS[party], size=10),
+                name=party, showlegend=True,
             )
         )
-    n_dummy = len(speakers_present)
+    n_dummy = len(parties_present)
 
     buttons = []
     for idx, judge in enumerate(judges):
@@ -171,11 +171,11 @@ def render_scatter(combined: pd.DataFrame, judges: list[str], viz_dir: Path) -> 
         buttons.append(dict(label=judge, method="update", args=[{"visible": visible}]))
 
     fig.update_layout(
-        title="BT strength vs. year, by judge (metadata the judge never saw) -- select a judge",
+        title="BT economic strength vs. year, by judge (party/year never shown to the judge) -- select a judge",
         xaxis=dict(title="year"),
-        yaxis=dict(title="BT strength"),
+        yaxis=dict(title="BT strength (higher = more 'right')"),
         plot_bgcolor="white",
-        legend=dict(title="speaker"),
+        legend=dict(title="party"),
         margin=dict(l=60, r=140, t=70, b=50),
         updatemenus=[dict(buttons=buttons, x=1.02, xanchor="left", y=1.0, direction="down", showactive=True)],
         height=650,
@@ -227,12 +227,14 @@ def render_heatmap(rank_corr_matrix: pd.DataFrame, viz_dir: Path) -> Path:
 def render_summary_table(
     scores_by_judge: dict[str, pd.DataFrame],
     cost_by_judge: dict[str, dict],
+    party_corr_by_judge: dict[str, dict | None],
     year_corr_by_judge: dict[str, dict | None],
     viz_dir: Path,
 ) -> tuple[Path, pd.DataFrame]:
     rows = []
     for judge, df in scores_by_judge.items():
         c = cost_by_judge.get(judge, {})
+        sp = party_corr_by_judge.get(judge)
         sy = year_corr_by_judge.get(judge)
         rows.append({
             "judge": judge,
@@ -241,9 +243,10 @@ def render_summary_table(
             "cost_usd_est": c.get("cost_usd_est"),
             "mean_se": float(df["se"].mean()),
             "regularized": bool(df["regularized"].iloc[0]) if "regularized" in df else None,
+            "party_r": sp["pointbiserial_r"] if sp else None,
+            "party_p": sp["pointbiserial_p"] if sp else None,
             "year_rho": sy["rho"] if sy else None,
             "year_p": sy["p"] if sy else None,
-            "year_n": sy["n"] if sy else None,
         })
     summary_df = pd.DataFrame(rows)
 
@@ -269,7 +272,7 @@ def render_summary_table(
         )]
     )
     fig.update_layout(
-        title="Per-judge agreement / consistency / cost summary",
+        title="Per-judge party-alignment / cost / consistency summary",
         height=110 + 34 * len(summary_df),
         margin=dict(l=10, r=10, t=60, b=10),
     )
@@ -308,13 +311,13 @@ Judges ({len(judges)}): <code>{html.escape(", ".join(judges))}</code><br>
 Items: {n_items}</p>
 <h2>Figures</h2>
 <table><thead><tr><th>figure</th><th>file</th></tr></thead><tbody>{rows_html}</tbody></table>
-<h2>Forest plot -- BT strength per item, per judge</h2>
+<h2>Forest plot -- BT strength per item, per judge (colored by party)</h2>
 <iframe src='forest.html'></iframe>
-<h2>Strength vs. year -- validation against metadata the judge never saw</h2>
+<h2>Strength vs. year -- validation against party / year the judge never saw</h2>
 <iframe src='scatter.html'></iframe>
 <h2>Judge x judge rank-correlation of BT scales</h2>
 <iframe src='heatmap.html'></iframe>
-<h2>Per-judge summary</h2>
+<h2>Per-judge summary (party alignment, cost)</h2>
 <iframe src='summary.html' style='height: 320px;'></iframe>
 <p class='muted'>Plotly figures load via CDN; open individual .html files directly for a full-window view.</p>
 </body></html>
@@ -329,6 +332,7 @@ def render_all(
     scores_by_judge: dict[str, pd.DataFrame],
     rank_corr_matrix: pd.DataFrame,
     cost_by_judge: dict[str, dict],
+    party_corr_by_judge: dict[str, dict | None],
     year_corr_by_judge: dict[str, dict | None],
     dimension: str,
 ) -> dict:
@@ -346,7 +350,9 @@ def render_all(
     forest_path = render_forest(scores_by_judge, viz_dir)
     scatter_path = render_scatter(combined, judges, viz_dir)
     heatmap_path = render_heatmap(rank_corr_matrix, viz_dir)
-    summary_path, summary_df = render_summary_table(scores_by_judge, cost_by_judge, year_corr_by_judge, viz_dir)
+    summary_path, summary_df = render_summary_table(
+        scores_by_judge, cost_by_judge, party_corr_by_judge, year_corr_by_judge, viz_dir,
+    )
 
     figure_paths = {
         "Forest plot (BT strength +/- SE per judge)": forest_path,

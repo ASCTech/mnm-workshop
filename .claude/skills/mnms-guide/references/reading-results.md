@@ -61,26 +61,34 @@ hierarchy.
 
 ## bt_scoring — a latent scale and how much to trust it
 
-**`output/scores_by_judge/<judge>.csv`** — the Bradley-Terry scale from one judge:
-`strength` (latent position), `se` (standard error), `n_matchups`, `rank`.
+The corpus is **State of the Union addresses (1950–2020)**, judged pairwise on
+**economic orientation: left ↔ right** — deliberately with *no rubric*, so how each
+model reads that contested axis (and how much the judges disagree) is part of the
+result. Each address is labelled by `president` and `party`, which the judge never sees.
 
-- Higher `strength` = further toward the judged pole (here, emotionally
-  intense / populist rhetoric). In one run the top items were FDR office
-  conversations and the GWB 9/11 address — a face-valid ordering.
+**`output/scores_by_judge/<judge>.csv`** — the Bradley-Terry scale from one judge:
+`strength` (latent position), `se` (standard error), `n_matchups`, `rank`, plus
+`president` / `party` / `year`.
+
+- Higher `strength` = further toward the second pole (here, economically "right").
+  In our run the top of every judge's scale was Reagan / the Bushes / Trump and the
+  bottom was Democrats — a face-valid economic ordering.
 - **`regularized = True`** means ridge/bootstrap kicked in because the comparison
   graph was near-separable (some item won/lost almost everything). Treat those
   `strength`s as shrunk toward 0 and lean on `se`.
 
-**`judge_rank_correlation.csv`** — judge × judge Spearman correlation of their
-scales. Values around **0.68–0.89** = judges largely agree on the *ordering* but not
-perfectly. This is the reliability measure: a scale only means something if
-independent judges reproduce it. A pair down near 0 would mean the dimension isn't
-being read consistently.
+**`judge_rank_correlation.csv`** — judge × judge Spearman correlation of their scales.
+In our run four judges (the two Geminis, Opus, Haiku) clustered at **~0.80–0.92**,
+while **GPT-mini sat apart at ~0.58–0.60 with everyone** — the reliability measure
+made visible. A scale only means something if independent judges reproduce it; the
+outlier is a feature to discuss ("what does *this* model think 'right' means?"), not
+a bug to hide.
 
-**Validation against `year`** came out flat and non-significant here — and that's an
-*honest null*, not a broken pipeline: rhetorical register isn't strongly temporal in
-this sample. Speaker-level contrast is the more informative axis; say so rather than
-fishing for a correlation.
+**Validation against `party`** is the headline (`strength_vs_party` in the console /
+summary table): a point-biserial correlation of BT strength with party coded right=1.
+Every judge came out **significant (r ≈ 0.44–0.78, all p < 0.001)** — the emergent
+scale really does separate Republican from Democratic addresses, without the judge
+ever being told the party. `year` is a secondary, non-causal trend check.
 
 ---
 

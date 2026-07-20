@@ -122,8 +122,23 @@ def sample_matchups(
     return selected
 
 
-def build_prompt(dimension: str, text_a: str, text_b: str) -> str:
-    return f"""You are judging two short transcript excerpts on a single dimension:
+def _clip(text: str, max_chars: int) -> str:
+    """Truncate to ``max_chars`` characters; ``max_chars <= 0`` means no limit."""
+    if max_chars and max_chars > 0 and len(text) > max_chars:
+        return text[:max_chars]
+    return text
+
+
+def build_prompt(dimension: str, text_a: str, text_b: str, max_chars: int = 0) -> str:
+    """Prompt for one pairwise comparison on ``dimension``, written as
+    ``left-pole <-> right-pole``. ``max_chars`` optionally truncates each
+    document (0 = send the full text). The prompt deliberately does NOT hand
+    the model a rubric for the dimension -- how it interprets an ambiguous
+    axis (e.g. "economic left/right") is part of what we're measuring across
+    judges."""
+    text_a = _clip(text_a, max_chars)
+    text_b = _clip(text_b, max_chars)
+    return f"""You are judging two speech excerpts on a single dimension, written as "left-pole <-> right-pole":
 
     {dimension}
 
@@ -133,17 +148,14 @@ Excerpt A:
 Excerpt B:
 \"\"\"{text_b}\"\"\"
 
-Which excerpt is MORE toward the second pole of the dimension above ("B" side
-of the "/" as written)? If the dimension reads "measured/formal <-> emotionally
-intense/populist", answer "A" or "B" for whichever excerpt is more emotionally
-intense/populist; the other pole is the default.
+Which excerpt sits MORE toward the SECOND pole of the dimension (the side after
+the "<->")? Judge the substance of the text against your own understanding of
+that pole -- there is no single official rubric.
 
 Respond with a JSON object with exactly these keys:
 - "winner": "A" or "B"
 - "confidence": a float from 0.0 (coin flip) to 1.0 (certain)
-- "reason": one short sentence
-
-Base your judgment only on the text given; ignore transcription artifacts."""
+- "reason": one short sentence"""
 
 
 def _usage_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float | None:
@@ -247,11 +259,12 @@ async def judge_one(
     right: str,
     order: str,
     timeout_s: float,
+    max_chars: int = 0,
 ) -> dict:
     """Judge the (item_i, item_j) pair once with model ``model``, using the
     precomputed (left, right) position assignment shared across all judges
     for this pair."""
-    prompt = build_prompt(dimension, transcripts[left], transcripts[right])
+    prompt = build_prompt(dimension, transcripts[left], transcripts[right], max_chars)
 
     verdict, usage, error = await _call_judge(client, model, prompt, timeout_s)
     record = {
@@ -323,6 +336,7 @@ async def run_judging(
     seed: int,
     concurrency: int = 6,
     timeout_s: float = 60.0,
+    max_chars: int = 0,
 ) -> None:
     """Judge every (pair, judge) combination not already recorded as 'ok' in
     comparisons_path, appending each result as soon as it completes
@@ -357,7 +371,7 @@ async def run_judging(
         item_i, item_j, left, right, order, model = task
         async with semaphore:
             record = await judge_one(
-                client, item_i, item_j, transcripts, dimension, model, left, right, order, timeout_s,
+                client, item_i, item_j, transcripts, dimension, model, left, right, order, timeout_s, max_chars,
             )
         async with lock:
             with comparisons_path.open("a", encoding="utf-8") as f:

@@ -33,8 +33,9 @@ uv run --package data_acquisition python data_acquisition/fetch_pmc_oa.py --limi
 # structure_analysis  <- arXiv metadata (balanced across ~10 categories) or NSF awards
 uv run --package data_acquisition python data_acquisition/fetch_arxiv_metadata.py --limit 800 --seed 7
 
-# bt_scoring + transcription  <- public-domain presidential audio (speaker-stratified)
-uv run --package data_acquisition python data_acquisition/fetch_presidential_audio.py --limit 60 --seed 7
+# bt_scoring  <- public-domain State of the Union address texts (1950-2020, labelled by party)
+uv run --package data_acquisition python data_acquisition/fetch_sotu.py
+# transcription  <- Common Voice (CC0) is fetched by the branch itself, no fetcher needed
 ```
 
 Each fetcher writes `data_acquisition/data/<source>/manifest.jsonl` plus the files.
@@ -55,11 +56,12 @@ uv run --package structure_analysis python structure_analysis/main.py \
 #   outputs -> structure_analysis/output/arxiv/ (extractions.jsonl, topics.csv,
 #              validation_metrics.json, topic_*_label.csv, viz/index.html)
 
-# bt_scoring: transcribe -> pairwise judge (multi-judge) -> Bradley-Terry
+# bt_scoring: pairwise judge SOTU texts on economic left/right (multi-judge) -> Bradley-Terry
 uv run --package bt_scoring python bt_scoring/main.py \
-    --num-items 0 --min-matchups 8
-#   --skip-transcribe / --skip-judge reuse cached transcripts / comparisons
-#   outputs -> bt_scoring/output/ + bt_scoring/comparisons.jsonl + transcripts/
+    --num-items 0 --min-matchups 6
+#   --dimension "..." changes the judged axis; --char-budget 0 = full speech text
+#   --judges m1 m2 ... picks the roster; --skip-judge reuses cached comparisons
+#   outputs -> bt_scoring/output/ + bt_scoring/comparisons.jsonl
 
 # transcription: Granite-Speech ASR on Common Voice, WER
 uv run --package transcription python transcription/main.py
@@ -85,11 +87,12 @@ mattering more than speed. A couple of things we've stuck to:
     `Lock`. It *looked* like a threading/numba problem but wasn't — it was fixed at
     the source, and the code now shuts down normally. When you touch cost/ledger,
     clustering, or exit paths, verify a clean exit with nothing left running.
-  - `bt_scoring/main.py` deliberately ends with `os._exit(0)` to dodge a
-    HF/torch background-thread shutdown hang from the ASR stack. That is a *known,
-    documented tradeoff*, not an oversight: `os._exit` skips interpreter cleanup, so
-    it's the last line and only there. Don't copy the pattern casually — reach for a
-    real fix first, as `structure_analysis` did.
+  - `transcription/main.py` deliberately ends with `os._exit(0)` to dodge a
+    HF datasets / torch background-thread shutdown hang from the ASR stack. That is a
+    *known, documented tradeoff*, not an oversight: `os._exit` skips interpreter
+    cleanup, so it's the last line and only there. Don't copy the pattern casually —
+    reach for a real fix first, as `structure_analysis` did. (`bt_scoring` used to
+    need this too, but since it moved off ASR to SOTU text it now exits normally.)
 
 If a run hangs, check for stray child processes before assuming the logic is wrong —
 the failure is often at teardown, not in the analysis.
