@@ -6,8 +6,7 @@ description: >-
   bt_scoring / transcription / data_acquisition do and why, how to run a branch,
   how to read or interpret its result files (agreement / Cohen's kappa, cost
   tables, topic clusters / NMI, Bradley-Terry scales, judge agreement), or how to
-  package their own research method as a Claude Code skill. Explains the
-  "corpus in -> structured data out" workshop thesis.
+  package their own research method as a skill. 
 ---
 
 # mnms workshop guide
@@ -22,17 +21,17 @@ through the OSU LiteLLM proxy.
 Your job when this skill is active is to **orient and explain**, not to rebuild
 anything. Help people find the branch closest to what they're doing, get it running,
 and read what comes out. The branch `README.md`s and the reference files below carry
-the details — point *into* those rather than restating them.
+the details. 
 
 ## The branches
 
-| Member | Modeled on | One-liner |
-|---|---|---|
-| `data_acquisition/` | — | Polite, resumable fetchers → `data/<source>/` + a JSONL manifest. Feeds everything else. |
-| `corpus_coding/` | a multi-model coding study | Codes a corpus with several models × repeated runs → inter-model **agreement** + intra-model **consistency** + cost. |
-| `structure_analysis/` | a syllabus-clustering study | LLM field extraction → local embeddings → **BERTopic** clusters → validated against a held-out label. |
+| Member | Modeled on | One-liner                                                                                                                              |
+|---|---|----------------------------------------------------------------------------------------------------------------------------------------|
+| `data_acquisition/` | — | Polite, resumable fetchers → `data/<source>/` + a JSONL manifest. Feeds everything else, common infrastructure.                        |
+| `corpus_coding/` | a multi-model coding study | Codes a corpus with several models × repeated runs → inter-model **agreement** + intra-model **consistency** + cost.                   |
+| `structure_analysis/` | a syllabus-clustering study | LLM field extraction → local embeddings → **BERTopic** clusters → validated against a held-out label.                                  |
 | `bt_scoring/` | a pairwise-judging study | Pairwise **LLM-as-judge** over SOTU address texts (economic left↔right) → a **Bradley-Terry** scale with SEs, validated against party. |
-| `transcription/` | self-hosted ASR work | Granite-Speech ASR on Common Voice, WER scoring. |
+| `transcription/` | self-hosted ASR work | Granite-Speech ASR on Common Voice, WER scoring.                                                                                       |
 
 ## Where to go next
 

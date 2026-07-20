@@ -6,6 +6,10 @@ This is the meta-step. One thing we keep coming back to is that the durable win 
 `mnms-guide` skill you're reading is a worked example. This file walks through how to
 make your own by taking this one apart.
 
+If the model harness provides its own skill authoring metaskill, rely more heavily on that.
+This writeup is meant to be a fallback and note that this skill is itself a quiet part of
+the larger point and process.
+
 ## What a skill actually is
 
 A skill is a directory with a `SKILL.md` file and optional bundled resources:

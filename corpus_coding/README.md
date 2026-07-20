@@ -3,10 +3,18 @@
 **The case study:** multi-model corpus coding. This branch is modeled on a project
 where we coded 1,099 PDFs through a 10-question codebook across ~5 model-runs (5,120
 results), then scored **inter-model agreement** and **intra-model consistency**, with
-a cost estimate produced before anything was spent. What stuck with us afterward: the
-grunt-work coding was only ever *expensive* — doable, just slow and costly. The part
-that had actually been out of reach was the reliability work, running the codebook
-15× over for redundancy, which nobody does by hand.
+a cost estimate produced before anything was spent. Ultimately this fed into a meta analysis paper.
+
+Many Research/Grad/Teaching Assistants have been asked to code many a data point,
+a process that is expensive in time, their pay, and the person's sanity. Recently,
+LLMs have acquired enormous context lengths, namely ~1M tokens, and have reduced
+(still non zero) confabulation rates. Applied to scoring, when careful, can result
+in being able to do in an afternoon and $50 what previously took months. The results
+are even, in some senses, more robust; the LLMs will answer similarly whether it's the 
+first or 1,000th paper and will 'forget', in that repeated runs are independent. 
+A curious result from the original case: when comparing LLM coded results against 
+human scored 'ground truth', the cheapest model most closely matched the human results.
+Was the cheapest model actually better, or were the more expensive models better than humans?
 
 **Data:** the openly-licensed stand-in for paywalled article PDFs —
 `../data_acquisition/fetch_pmc_oa.py`, which pulls the **PMC Open Access subset**
@@ -18,16 +26,7 @@ uv run --package data_acquisition python data_acquisition/fetch_pmc_oa.py --limi
 # -> data_acquisition/data/pmc_oa/{manifest.jsonl, articles/PMC*/...}
 ```
 
-**What this branch does (to build):**
-
-1. Define a small codebook (N interpretive questions with a fixed answer schema)
-   over the article text — e.g. study type, has-RCT, sample size reported,
-   funding disclosed, human/animal/in-vitro.
-2. Code every article with several models through the **LiteLLM proxy** (see
-   `../envs/`), M runs each, into Pydantic-schema JSON.
-3. Score **inter-model agreement** (do models code the same article alike?) and
-   **intra-model consistency** (does one model repeat itself across runs?), plus
-   per-run cost accounting; emit an HTML/CSV report.
-
-CC BY / CC0 licensing means the resulting demo corpus is redistributable, unlike
-the original.
+**What this branch does:**
+1. Define the codebook/rubric - just as you would with a human graded, define what it is you're looking for.
+2. Run the batches - script up your codebook against your dataset and set it off, logging throughout.
+3. Analyze result quality - Ideally, you'd have a human coded sample set since that's often the point of comparison. Otherwise, or in addition, intra and inter model agreement can give some information. 

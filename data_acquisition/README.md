@@ -44,6 +44,7 @@ All scripts use `common.PoliteSession`, which:
 - retries with exponential backoff and honors `Retry-After` on 429/5xx;
 - streams downloads, skips files already present, and writes atomically, so
   re-runs resume instead of re-fetching.
+- Many/most sites that openly host data are being hammered by bots, so being a good internet citizen matters.
 
 
 

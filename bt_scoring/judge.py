@@ -1,4 +1,4 @@
-"""Pairwise LLM-as-judge over transcript pairs, via the OSU LiteLLM proxy.
+"""Pairwise LLM-as-judge over document (speech-text) pairs, via the OSU LiteLLM proxy.
 
 Mirrors the shape of the ``podcasts`` reference (async worker pool, JSON
 checkpoint per comparison, retry-on-failure) but compacted: one
@@ -34,15 +34,15 @@ from pydantic import BaseModel, Field, ValidationError
 # accounting only. Entries not covering a requested judge simply yield a
 # `None` cost (reported as "n/a") rather than a fabricated number.
 PRICE_PER_1M_USD: dict[str, tuple[float, float]] = {
-    # Round 1 roster
-    "gemini-2.5-flash-lite": (0.10, 0.40),
-    "claude-haiku-4-5-20251001": (1.00, 5.00),
-    "llama3-3-70b-instruct": (0.20, 0.20),
-    # Round 2 roster (default judges)
-    "gemini-3.1-flash-lite": (0.10, 0.40),        # flash-lite tier, ~stable across gens
-    "gpt-5.4-mini-2026-03-17": (0.25, 1.00),       # mini tier, order-of-magnitude estimate
-    "claude-opus-4-8": (5.00, 25.00),              # confirmed current Anthropic list price
+    # Default judge roster (DEFAULT_JUDGES in main.py)
+    "gemini-3.1-flash-lite": (0.10, 0.40),         # flash-lite tier, ~stable across gens
     "gemini-3.1-pro-preview": (1.25, 5.00),        # pro tier, order-of-magnitude estimate
+    "gpt-5.4-mini-2026-03-17": (0.25, 1.00),       # mini tier, order-of-magnitude estimate
+    "claude-haiku-4-5-20251001": (1.00, 5.00),
+    "claude-opus-4-8": (5.00, 25.00),              # confirmed current Anthropic list price
+    # Other models you might pass via --judges (kept so cost is still accounted)
+    "gemini-2.5-flash-lite": (0.10, 0.40),
+    "llama3-3-70b-instruct": (0.20, 0.20),
 }
 
 # Judges known (empirically, per the workshop coordinator) to sometimes return
@@ -252,7 +252,7 @@ async def judge_one(
     client: AsyncOpenAI,
     item_i: str,
     item_j: str,
-    transcripts: dict[str, str],
+    texts: dict[str, str],
     dimension: str,
     model: str,
     left: str,
@@ -264,7 +264,7 @@ async def judge_one(
     """Judge the (item_i, item_j) pair once with model ``model``, using the
     precomputed (left, right) position assignment shared across all judges
     for this pair."""
-    prompt = build_prompt(dimension, transcripts[left], transcripts[right], max_chars)
+    prompt = build_prompt(dimension, texts[left], texts[right], max_chars)
 
     verdict, usage, error = await _call_judge(client, model, prompt, timeout_s)
     record = {
@@ -330,7 +330,7 @@ async def run_judging(
     client: AsyncOpenAI,
     matchups: list[tuple[str, str]],
     judges: list[str],
-    transcripts: dict[str, str],
+    texts: dict[str, str],
     dimension: str,
     comparisons_path: Path,
     seed: int,
@@ -371,7 +371,7 @@ async def run_judging(
         item_i, item_j, left, right, order, model = task
         async with semaphore:
             record = await judge_one(
-                client, item_i, item_j, transcripts, dimension, model, left, right, order, timeout_s, max_chars,
+                client, item_i, item_j, texts, dimension, model, left, right, order, timeout_s, max_chars,
             )
         async with lock:
             with comparisons_path.open("a", encoding="utf-8") as f:

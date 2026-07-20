@@ -6,7 +6,7 @@ seen*, and feel free to push back on it with your own experience.
 
 ## Where this comes from
 
-Our team spends its time helping researchers turn a *method* into working software:
+Our team spends its time helping researchers turn a *method* or *problem* into working software:
 taking a corpus — PDFs, audio, syllabi, survey transcripts — and getting structured
 data back out that they can analyze. We've done this across a lot of fields, and no
 two projects wanted the same thing. That variety is actually the point. The specific
@@ -19,17 +19,15 @@ through one LiteLLM proxy, a few models compared, cost tracked, and a report at 
 end. **Corpus in → structured data out.** But that's a description of what worked,
 not a template we hand people.
 
-## Two baselines worth keeping separate
+## Two aspects worth keeping separate
 
-When someone asks "couldn't the researcher just do this by hand?", it helps to split
-two very different things:
+The workshop embodies the work from two angles, AI tooling for productivity and AI
+models as instrument. The former helps a researcher or developer be more productive,
+reach further, the latter changes experiment design and, when degree varies enough,
+what can be studied. The case studies use both heavily, the originals and themselves 
+having been created with heavy agent support, but it's worth keeping those distinct
+for different queries from different users. 
 
-1. **Doing the task by hand** — coding 1,000 PDFs, transcribing hundreds of clips.
-2. **Building the tool to do it, without a software team.**
-
-In our experience, agents mostly collapsed the *second* cost, not the first. That's
-the part we find worth talking about, because it's the part that used to quietly kill
-the ambitious version of a project.
 
 ## Three kinds of change we noticed
 
@@ -38,34 +36,32 @@ roughly in increasing order of how much they surprised us. Each branch happens t
 illustrate one cleanly:
 
 1. **Some work was just expensive, and got cheap.** Grunt work that was always
-   possible, only costly — months of RA time compressed into a days-long round trip
-   for a few dollars.
+   possible, only costly — months of RA time compressed into a days-long round (initial consult to data; script run was hours)
+   trip for a tens of dollars.
    → **`corpus_coding`** is the clearest version of this: the same codebook run
    across many models and repeated runs, for the price of a coffee. (See the cost
    spread in `reading-results.md`.)
 
 2. **Some work had been out of reach for the researcher alone** — not because of
-   effort, but because it needed a computational-methods skill they didn't have and
-   couldn't easily hire for.
+   effort, but because it needed in-depth methods from other fields.
    → **`structure_analysis`** is this one: corpus-wide topic clustering
-   (extract → embed → BERTopic) isn't something most humanities or social-science
-   researchers assemble on their own.
+   (extract → embed → BERTopic) isn't a widely known method, or even capability.
 
 3. **Sometimes the bottleneck was the code, not the compute — and some designs were
    simply infeasible by hand at all.**
    → **`bt_scoring`** is the case that most changed how we think about this:
-   thousands of pairwise judgments no human could hold in mind. It only works because
+   thousands of indendent pairwise judgments no human could hold in mind. It only works because
    the judge is *cheap and consistent*. The unlock there is reliability, not raw
    capability.
 
 ## The through-line: package it so you can invoke it, not rebuild it
 
-The most durable win we've seen isn't a clever prompt or a specific model. It's
-taking a hard-won capability and wrapping it in a stable chassis with a small, safe
-surface — so the next study, or the next researcher, invokes it instead of rebuilding
-it from scratch. That's what turned one-off projects into things we could reuse.
+The most common big picture win we've seen isn't a clever prompt or a specific model. It's
+taking a hard-won capability and wrapping it, or even just remembering the thread to pull,
+so we can quickly adapt it for the next project. A growing library of techniques that's
+continually curated and improved.
 
-A Claude Code skill is exactly that kind of packaging, for a coding agent. The
+A skill is exactly that kind of packaging, for a coding agent. The
 `mnms-guide` skill you're reading is a small worked example of it — and
 `authoring-skills.md` closes the loop by walking through how to package *your own*
 method the same way.

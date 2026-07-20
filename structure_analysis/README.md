@@ -2,11 +2,15 @@
 
 **The case study:** extraction → clustering. This branch is modeled on a project that
 took 1,716 syllabi across 79 courses → **5-field LLM extraction** → embeddings →
-**BERTopic** (UMAP + HDBSCAN) → a topic hierarchy that ended up feeding real
-college-level course-planning decisions. It's the "extract, then analyze" two-stage
-shape. What made this one interesting to us was that the gap was *capability, not
-cost*: corpus-wide topic clustering isn't something the researcher could have
-assembled alone — it's a computational-methods skill, not just effort.
+**BERTopic** (UMAP + HDBSCAN) → a topic hierarchy that fed decision-making.
+
+Answers the question of "what can I get from this pile of data, and how". Some aspects
+never strictly required recent AI techniques, some made existing approaches cheap,
+some are new kinds of analysis that are entirely based in modern language models. 
+This can help quickly get oriented in a complex space, make decisions, and enable more 
+reproducible  results across subjective matters. However, even though these techniques can 
+give quantitative results that doesn't make them objective; the subjectivity is applied
+by methodology selection and in the weights of the model.
 
 **Data:** two openly-licensed stand-ins, both from `../data_acquisition/`:
 
@@ -21,11 +25,11 @@ uv run --package data_acquisition python data_acquisition/fetch_arxiv_metadata.p
 uv run --package data_acquisition python data_acquisition/fetch_nsf_awards.py --limit 500 --keyword "topic modeling"
 ```
 
-**What this branch does (to build):**
+**What this branch does:**
 
-1. **Extract** a few structured fields from each abstract via the LiteLLM proxy
-   (see `../envs/`) — e.g. domain, methods, techniques, contribution.
-2. **Embed** the extracted text and run **BERTopic** (UMAP + HDBSCAN) into a topic
-   hierarchy.
-3. **Validate** the recovered clusters against the held-out label (arXiv category
-   / NSF program) — a check the original syllabi corpus couldn't offer.
+Big picture, three phases: 
+1. Extract - given unstructured data, we use LLMs to extract information that's present in a document but not structured. For example, papers all list author, title, usually have abstracts, but it's hard for a human to write a single rule to accurately identify all of them.
+2. Embed - Given that extracted data, embed the words in a vector space. The end result is a vector encoding the semantics of the data according to the model.
+3. Compute - Now that the data is in a computable form we can operate on it. These can be simple things, like distance within the vector space, or more complex like dimensional reduction with emergent labels.
+
+
