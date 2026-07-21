@@ -1,12 +1,12 @@
 """Pairwise LLM-as-judge over document (speech-text) pairs, via the OSU LiteLLM proxy.
 
-Mirrors the shape of the ``podcasts`` reference (async worker pool, JSON
-checkpoint per comparison, retry-on-failure) but compacted: one
-``comparisons.jsonl`` file instead of one JSON file per matchup, and a single
-asyncio semaphore instead of an explicit queue/worker set.
+Uses an async worker pool with a JSON checkpoint per comparison and
+retry-on-failure, compacted to one ``comparisons.jsonl`` file (instead of one
+JSON file per matchup) and a single asyncio semaphore (instead of an explicit
+queue/worker set).
 
-Round 2 extends this to a *multi-judge* comparison: the identical pair set is
-judged by several models so their Bradley-Terry scales can be compared at low
+It supports a *multi-judge* comparison: the identical pair set is judged by
+several models so their Bradley-Terry scales can be compared at low
 n. To keep that comparison fair, the A/B position for a given (item_i, item_j)
 pair is derived deterministically from the pair + a seed (``_position_for_pair``)
 rather than a per-call RNG draw, so every judge sees the same left/right

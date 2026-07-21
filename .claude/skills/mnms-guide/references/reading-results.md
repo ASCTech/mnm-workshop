@@ -18,7 +18,7 @@ they regenerate when you re-run, so read them as calibration, not constants.
 - κ near **0.2** on an open-ended question (e.g. `primary_field`) = models genuinely
   diverge. Not necessarily a bug — it says the *question* is subjective, which is
   itself a finding about your instrument.
-- **The one that trips people up:** a question can show **98.9% agreement but κ = 0.0**
+- **The one that trips people up:** a question can show **96.7% agreement but κ = 0.0**
   (`open_data_statement` did). That's the **kappa paradox** — when almost every
   article gets the same label, there's no variance for chance-corrected agreement to
   credit, so κ collapses even though raw agreement is high. Read `pct_agreement` and
@@ -28,9 +28,9 @@ they regenerate when you re-run, so read them as calibration, not constants.
 runs? Low consistency with high inter-model agreement is a red flag that a model is
 unstable even when the crowd converges.
 
-**`cost_by_model.csv`** — the cost story in one table. In one run the *identical* 60
-calls cost **~$1.50 on `claude-opus-4-8` vs ~$0.056 on `gemini-3.1-flash-lite`** — a
-~27× spread. The workshop point: pick the cheapest model whose agreement/consistency
+**`cost_by_model.csv`** — the cost story in one table. In the shipped run the *identical* 20
+calls cost **~$0.51 on `claude-opus-4-8` vs ~$0.018 on `gemini-3.1-flash-lite`** — a
+~28× spread. The workshop point: pick the cheapest model whose agreement/consistency
 is good enough for the question, and this table is how you defend that choice.
 
 ---
@@ -40,18 +40,18 @@ is good enough for the question, and this table is how you defend that choice.
 **`validation_metrics.json`** — how well the recovered topics line up with the
 held-out label (arXiv category / NSF program):
 
-- `normalized_mutual_info` (NMI) and `v_measure` around **0.50** = clusters capture
-  about half the category structure — solidly meaningful for unsupervised topics on
+- `normalized_mutual_info` (NMI) and `v_measure` around **0.66** = clusters capture
+  much of the category structure — solidly meaningful for unsupervised topics on
   short text. `homogeneity` (are clusters pure?) vs `completeness` (is each category
   in one cluster?) tells you *which way* it's imperfect.
-- `adjusted_rand_index` (~0.16) runs lower than NMI here and that's expected — ARI
+- `adjusted_rand_index` (~0.50) runs lower than NMI here and that's expected — ARI
   is stricter and punishes the large outlier group.
-- `outlier_pct` (~40%) = HDBSCAN's noise label (`topic == -1`). Reported honestly,
-  not hidden; a high outlier rate on short abstracts is normal, not a failure.
+- `outlier_pct` (~19%) = HDBSCAN's noise label (`topic == -1`). Reported honestly,
+  not hidden; a sizable outlier rate on short abstracts is normal, not a failure.
 
 **`topic_dominant_label.csv`** — the payoff table: each topic's dominant true label
 and what fraction of the topic it covers. Clean topics look like `astro-ph.GA` at
-100%, `cond-mat.stat-mech` at 97%, `econ.EM` at 91% — i.e. the clustering rediscovered
+100%, `eess.AS` at 90%, `math.PR` at 89% — i.e. the clustering rediscovered
 real fields from extracted text alone. That is the "capability" claim made concrete.
 
 `topics.csv` lists top words per topic; `viz/index.html` has the intertopic map and

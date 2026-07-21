@@ -120,8 +120,8 @@ def fit_bt_choix(comparisons: pd.DataFrame, items: list[str]) -> pd.Series:
 
 def judge_rank_correlation(strengths_by_judge: dict[str, pd.Series]) -> pd.DataFrame:
     """Judge x judge Spearman rank-correlation matrix between per-judge BT
-    strength scales (Round 2 addition; the fitting machinery above is
-    untouched -- this just compares its outputs across judges)."""
+    strength scales (the fitting machinery above is untouched -- this just
+    compares its outputs across judges)."""
     judges = list(strengths_by_judge.keys())
     mat = pd.DataFrame(index=judges, columns=judges, dtype=float)
     for a in judges:
