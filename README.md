@@ -3,7 +3,7 @@
 ## Mind and Machine Alignment Summit Workshop - AI in Research Case Studies
 
 
-<a href="https://github.com/ASCTech/mnm-workshop"><img src="repo-qr.svg" alt="QR code linking to this repository" align="right" width="160" height="160"></a>
+<a href="https://github.com/ASCTech/mnm-workshop"><img src="repo-qr.svg" alt="QR code linking to this repository" align="right" width="320" height="320"></a>
 
 
 This is the companion repository for part of The Ohio State University's Emerging Technology
