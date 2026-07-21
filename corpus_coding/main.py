@@ -218,6 +218,10 @@ Total cost: ${{ "%.4f"|format(total_cost) }}.</p>
 def main() -> None:
     args = parse_args()
     load_dotenv(REPO_ROOT / ".env")
+    # DEFAULTS to OSU's LiteLLM proxy via LITELLM_URL/LITELLM_KEY (repo-root .env).
+    # It's a standard OpenAI-compatible client: repoint those env vars for a different
+    # proxy, or set base_url/api_key to a vendor's own OpenAI-compatible endpoint to
+    # call the vendor directly.
     client = OpenAI(
         base_url=os.environ["LITELLM_URL"].rstrip("/") + "/v1",
         api_key=os.environ["LITELLM_KEY"],

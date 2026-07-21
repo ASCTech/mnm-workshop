@@ -35,6 +35,13 @@
 
             # Claude Code appends /v1/messages to ANTHROPIC_BASE_URL, so pass the
             # bare host. The OSU LiteLLM proxy exposes the Anthropic Messages API there.
+            #
+            # DEFAULT: OSU's LiteLLM proxy. To use a *different* Anthropic-compatible
+            # proxy, just point LITELLM_URL/LITELLM_KEY at it in the repo-root .env.
+            # To go DIRECT to Anthropic instead, drop the proxy entirely: leave
+            # ANTHROPIC_BASE_URL unset (Claude Code defaults to https://api.anthropic.com)
+            # and export ANTHROPIC_API_KEY=<your Anthropic key> in place of the two lines
+            # below. The ANTHROPIC_MODEL vars above stay as-is for the direct path too.
             export ANTHROPIC_BASE_URL="''${LITELLM_URL%/}"
             export ANTHROPIC_AUTH_TOKEN="''${LITELLM_KEY:-}"
             # Avoid a stale x-api-key from the ambient environment overriding the token.

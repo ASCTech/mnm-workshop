@@ -26,6 +26,21 @@ LITELLM_URL=https://litellm.cloud.osu.edu/
 LITELLM_KEY=sk-...
 ```
 
+## Using a different proxy, or going direct to the vendor
+
+Everything here **defaults to OSU's LiteLLM proxy** — that's the workshop setup, but
+nothing is locked to it. Two ways to change the target:
+
+- **A different proxy** (any LiteLLM / OpenAI- / Anthropic-compatible gateway): point
+  `LITELLM_URL` / `LITELLM_KEY` in the repo-root `.env` at it. The Claude Code and OpenCode
+  flakes read `LITELLM_URL` directly; Codex (`config.toml`) and Pi (`models.json`) hard-code
+  the host, so edit `base_url` / `baseUrl` there too.
+- **Direct to the vendor** (no proxy): edit that agent's config to the vendor's own endpoint
+  and key — `https://api.anthropic.com` + an Anthropic key for the Claude-model agents
+  (Claude Code, Pi), `https://api.openai.com/v1` + an OpenAI key for Codex.
+
+See each dir's README ("Using a different proxy…") for the exact field to change.
+
 ## Usage
 
 ```bash

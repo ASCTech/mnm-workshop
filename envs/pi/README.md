@@ -52,6 +52,14 @@ nix develop -c pi --provider litellm --model claude-sonnet-5 "hi"
 `pi --list-models` shows what's configured; `/model` (or `Ctrl+L`) switches inside the TUI.
 List the catalog with `curl -s $LITELLM_URL/v1/models -H "Authorization: Bearer $LITELLM_KEY"`.
 
+## Using a different proxy, or going direct to the vendor
+
+`baseUrl` in [`models.json`](./models.json) **defaults to OSU's LiteLLM proxy**. To use a
+different Anthropic-compatible proxy, change `baseUrl`/`apiKey` there. To go **directly to
+Anthropic**, set `baseUrl` to `https://api.anthropic.com` and `apiKey` to your Anthropic
+key (e.g. `"$ANTHROPIC_API_KEY"`, with that var added to the repo-root `.env`). The
+`api: "anthropic-messages"` setting already matches the direct Anthropic endpoint.
+
 ## Notes
 
 - Editing `models.json` / `settings.json` here updates the live config on the next

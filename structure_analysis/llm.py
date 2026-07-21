@@ -37,6 +37,11 @@ _client: OpenAI | None = None
 def get_client() -> OpenAI:
     global _client
     if _client is None:
+        # DEFAULTS to OSU's LiteLLM proxy via LITELLM_URL/LITELLM_KEY (repo-root .env).
+        # This is a plain OpenAI-compatible client, so to use a different proxy just
+        # repoint those two env vars; to call a vendor directly, set base_url to the
+        # vendor's own OpenAI-compatible endpoint (e.g. "https://api.openai.com/v1")
+        # and api_key to that vendor's key.
         _client = OpenAI(
             base_url=os.environ["LITELLM_URL"].rstrip("/") + "/v1",
             api_key=os.environ["LITELLM_KEY"],

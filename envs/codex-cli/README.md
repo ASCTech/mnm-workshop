@@ -60,3 +60,11 @@ nix develop -c codex -m gpt-5.5-pro-2026-04-24 -c model_provider=litellm
 ```
 
 List the catalog with `curl -s $LITELLM_URL/v1/models -H "Authorization: Bearer $LITELLM_KEY"`.
+
+## Using a different proxy, or going direct to the vendor
+
+`base_url` **defaults to OSU's LiteLLM proxy**. To use a different OpenAI-compatible
+proxy, change `base_url` in [`config.toml`](./config.toml) (and `env_key` if that proxy's
+key lives in another variable). To go **directly to OpenAI**, set
+`base_url = "https://api.openai.com/v1"`, `env_key = "OPENAI_API_KEY"`, and a real OpenAI
+model id.

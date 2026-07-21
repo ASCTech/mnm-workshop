@@ -52,6 +52,15 @@ ANTHROPIC_MODEL=claude-opus-4-7 nix develop -c claude
 or from inside the TUI with `/model claude-sonnet-5`. Any model id returned by
 `curl -s $LITELLM_URL/v1/models -H "Authorization: Bearer $LITELLM_KEY"` works.
 
+## Using a different proxy, or going direct to the vendor
+
+The endpoint **defaults to OSU's LiteLLM proxy** (`ANTHROPIC_BASE_URL` ← `LITELLM_URL`
+from the repo-root `.env`). To use a *different* Anthropic-compatible proxy, just point
+`LITELLM_URL`/`LITELLM_KEY` at it. To skip the proxy and talk **directly to Anthropic**,
+edit the flake's `shellHook`: leave `ANTHROPIC_BASE_URL` unset (Claude Code then defaults
+to `https://api.anthropic.com`) and export `ANTHROPIC_API_KEY=<your Anthropic key>` in
+place of `ANTHROPIC_AUTH_TOKEN`.
+
 ## Troubleshooting
 
 - **401 / auth errors** — check `LITELLM_KEY` is in the repo-root `.env`; the shell

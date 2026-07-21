@@ -62,6 +62,14 @@ nix develop -c opencode run "hi" --model litellm/claude-sonnet-5
 List the catalog with:
 `curl -s $LITELLM_URL/v1/models -H "Authorization: Bearer $LITELLM_KEY"`.
 
+## Using a different proxy, or going direct to the vendor
+
+`baseURL` in [`opencode.json`](./opencode.json) **defaults to OSU's LiteLLM proxy**. To
+use a different OpenAI-compatible proxy, change `baseURL`/`apiKey`. To go **directly to a
+vendor**, either point `baseURL` at the vendor's own OpenAI-compatible endpoint, or drop
+the custom `litellm` provider entirely and use one of OpenCode's built-in providers (e.g.
+`anthropic`, `openai`) with that vendor's key.
+
 ## Notes
 
 - The `litellm` provider uses `@ai-sdk/openai-compatible` (the `/v1/chat/completions`

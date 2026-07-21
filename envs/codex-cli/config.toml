@@ -5,6 +5,10 @@
 model = "gpt-5.5-2026-04-24"
 model_provider = "litellm"
 
+# DEFAULT: OSU's LiteLLM proxy. To use a different OpenAI-compatible proxy, change
+# base_url below (and, if needed, env_key to whatever var holds that proxy's key).
+# To go DIRECT to OpenAI instead, set base_url = "https://api.openai.com/v1",
+# env_key = "OPENAI_API_KEY", and a real OpenAI model id (e.g. model = "gpt-5.5").
 [model_providers.litellm]
 name = "OSU LiteLLM Proxy"
 base_url = "https://litellm.cloud.osu.edu/v1"

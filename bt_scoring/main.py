@@ -174,6 +174,10 @@ def main() -> None:
     print(f"Sampled {len(matchups)} matchups (min {args.min_matchups}/item, {len(identifiers)} items) "
           f"-- judged by {len(args.judges)} models: {args.judges}", flush=True)
     if not args.skip_judge:
+        # DEFAULTS to OSU's LiteLLM proxy via LITELLM_URL/LITELLM_KEY (repo-root .env).
+        # Standard OpenAI-compatible client: repoint those env vars for a different
+        # proxy, or set base_url/api_key to a vendor's own OpenAI-compatible endpoint
+        # to call the vendor directly.
         client = AsyncOpenAI(
             base_url=os.environ["LITELLM_URL"].rstrip("/") + "/v1",
             api_key=os.environ["LITELLM_KEY"],
